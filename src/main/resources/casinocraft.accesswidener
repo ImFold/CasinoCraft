@@ -1,0 +1,5 @@
+accessWidener v2 named
+
+accessible field net/minecraft/recipe/SmithingTransformRecipe template Lnet/minecraft/recipe/Ingredient;
+accessible field net/minecraft/recipe/SmithingTransformRecipe base Lnet/minecraft/recipe/Ingredient;
+accessible field net/minecraft/recipe/SmithingTransformRecipe addition Lnet/minecraft/recipe/Ingredient;

@@ -1,0 +1,816 @@
+package com.casinocraft.client;
+
+import com.casinocraft.CasinoLayout;
+import com.casinocraft.economy.ItemPrices;
+import com.casinocraft.game.Roulette;
+import com.casinocraft.game.RouletteBet;
+import com.casinocraft.game.SlotSymbol;
+import com.casinocraft.network.ModNetworking;
+import com.casinocraft.screen.CasinoScreenHandler;
+import com.casinocraft.util.Money;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.registry.Registries;
+import net.minecraft.screen.slot.Slot;
+import net.minecraft.text.Text;
+import net.minecraft.util.Util;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Интерфейс казино. Вся графика рисуется кодом — текстуры не нужны,
+ * поэтому мод нормально выглядит с любым ресурспаком.
+ */
+public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
+    private enum Tab {
+        SLOTS, ROULETTE, SHOP
+    }
+
+    private static final int[] BET_STEPS = {10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000};
+
+    private static final int C_PANEL = 0xFF121218;
+    private static final int C_PANEL_EDGE = 0xFF404058;
+    private static final int C_INNER = 0xFF181822;
+    private static final int C_INNER_EDGE = 0xFF34344A;
+    private static final int C_TEXT = 0xFFEDEDF2;
+    private static final int C_DIM = 0xFF9A9AAE;
+    private static final int C_GOLD = 0xFFFFC94A;
+    private static final int C_GREEN = 0xFF57E07A;
+    private static final int C_RED = 0xFFFF5B5B;
+    private static final int C_BTN = 0xFF23232F;
+    private static final int C_BTN_HOVER = 0xFF323244;
+    private static final int C_BTN_EDGE = 0xFF4A4A60;
+
+    private static final int TABS_Y = 30;
+    private static final int TAB_H = 16;
+    private static final int TAB_W = 58;
+    private static final int SLOT_TAB_X = 155;
+    private static final int ROULETTE_TAB_X = 215;
+    private static final int SHOP_TAB_X = 275;
+
+    private static final int BET_Y = 50;
+    private static final int BET_BTN_W = 18;
+    private static final int BET_BTN_H = 14;
+    private static final int BET_MINUS_X = 158;
+    private static final int BET_PLUS_X = 310;
+    private static final int CONTENT_CENTER = 243;
+
+    private static final int SELL_X = 14;
+    private static final int SELL_Y = 94;
+    private static final int SELL_W = 126;
+    private static final int SELL_H = 16;
+
+    private static final int WITHDRAW_X = 14;
+    private static final int WITHDRAW_Y = 112;
+    private static final int WITHDRAW_W = 126;
+    private static final int WITHDRAW_H = 16;
+
+    private static final int REEL_Y = 70;
+    private static final int REEL_SIZE = 44;
+    private static final int[] REEL_X = {173, 221, 269};
+
+    private static final int SPIN_X = 158;
+    private static final int SPIN_Y = 132;
+    private static final int SPIN_W = 170;
+    private static final int SPIN_H = 14;
+
+    private static final int ROULETTE_STRIP_Y = 68;
+    private static final int ROULETTE_CELL_W = 33;
+    private static final int ROULETTE_CELL_STEP = 34;
+    private static final int ROULETTE_BETS_Y = 102;
+
+    private static final int SHOP_X = 156;
+    private static final int SHOP_Y = 52;
+    private static final int SHOP_CELL_W = 38;
+    private static final int SHOP_CELL_H = 38;
+    private static final int SHOP_STEP_X = 44;
+    private static final int SHOP_STEP_Y = 42;
+    private static final int SHOP_COLUMNS = 4;
+    private static final int SHOP_ROWS = 2;
+    private static final int SHOP_SCROLL_X = 329;
+    private static final int SHOP_SCROLL_H = 80;
+    private static final int SHOP_SEARCH_X = 156;
+    private static final int SHOP_SEARCH_Y = 136;
+    private static final int SHOP_SEARCH_W = 130;
+    private static final int SHOP_SEARCH_H = 14;
+
+    private Tab tab = Tab.SLOTS;
+    private int betIndex = 3;
+    private int shopRow;
+    private String shopQuery = "";
+    private TextFieldWidget searchField;
+    private List<Item> sortedCatalog;
+    private List<Item> filteredCatalog;
+    private Map<Item, String> nameCache;
+    private boolean filterDirty = true;
+
+    private long shownBalance;
+    private double localMouseX;
+    private double localMouseY;
+
+    private final SlotSymbol[] reels = {SlotSymbol.CHERRY, SlotSymbol.LEMON, SlotSymbol.SEVEN};
+    private boolean spinning;
+    private long spinStart;
+    private final long[] reelStopAt = new long[3];
+    private SlotSymbol[] pendingReels;
+    private long pendingPayout;
+    private long pendingBalance;
+    private long lastPayout;
+    private long lastStake;
+    private long resultFlashUntil;
+
+    private RouletteBet rouletteBet = RouletteBet.RED;
+    private boolean rouletteSpinning;
+    private long rouletteStart;
+    private int rouletteTarget = -1;
+    private long roulettePayout;
+    private long rouletteStake;
+    private long rouletteBalance;
+    private long rouletteFlashUntil;
+
+    private String noticeKey = "";
+    private long noticeAmount;
+    private long noticeUntil;
+    private boolean noticePositive;
+
+    public CasinoScreen(CasinoScreenHandler handler, PlayerInventory inventory, Text title) {
+        super(handler, inventory, title);
+        this.backgroundWidth = CasinoLayout.WIDTH;
+        this.backgroundHeight = CasinoLayout.HEIGHT;
+    }
+
+    public static CasinoScreen current() {
+        return MinecraftClient.getInstance().currentScreen instanceof CasinoScreen screen ? screen : null;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        this.x = (this.width - this.backgroundWidth) / 2;
+        this.y = (this.height - this.backgroundHeight) / 2;
+        this.shownBalance = this.handler.getBalance();
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        ItemPrices.ensureRecipes(client.world);
+
+        this.searchField = new TextFieldWidget(textRenderer, this.x + SHOP_SEARCH_X, this.y + SHOP_SEARCH_Y,
+                SHOP_SEARCH_W, SHOP_SEARCH_H, Text.translatable("gui.casinocraft.shop.search"));
+        this.searchField.setMaxLength(32);
+        this.searchField.setText(shopQuery);
+        this.searchField.setChangedListener(value -> {
+            shopQuery = value;
+            filterDirty = true;
+        });
+        this.filterDirty = true;
+    }
+
+    // ------------------------------------------------------------- рендер
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.localMouseX = mouseX - this.x;
+        this.localMouseY = mouseY - this.y;
+        updateAnimations(Util.getMeasuringTimeMs());
+        this.renderBackground(context);
+        super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
+        MatrixStack matrices = context.getMatrices();
+        matrices.push();
+        matrices.translate((float) this.x, (float) this.y, 0.0F);
+
+        box(context, 0, 0, CasinoLayout.WIDTH, CasinoLayout.HEIGHT, C_PANEL, C_PANEL_EDGE);
+        context.fill(6, 22, CasinoLayout.WIDTH - 6, 23, 0xFF2E2E40);
+        box(context, CasinoLayout.LEFT_X, CasinoLayout.LEFT_Y, CasinoLayout.LEFT_W, CasinoLayout.LEFT_H, C_INNER, C_INNER_EDGE);
+        box(context, CasinoLayout.RIGHT_X, CasinoLayout.RIGHT_Y, CasinoLayout.RIGHT_W, CasinoLayout.RIGHT_H, C_INNER, C_INNER_EDGE);
+
+        for (Slot slot : this.handler.slots) {
+            slotFrame(context, slot.x, slot.y);
+        }
+
+        matrices.pop();
+    }
+
+    @Override
+    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
+        long now = Util.getMeasuringTimeMs();
+
+        context.drawTextWithShadow(textRenderer, Text.literal("КАЗИНО"), 10, 8, C_GOLD);
+        Text balanceText = Text.translatable("gui.casinocraft.balance", Money.format(shownBalance));
+        context.drawTextWithShadow(textRenderer, balanceText,
+                CasinoLayout.WIDTH - 10 - textRenderer.getWidth(balanceText), 8, C_GOLD);
+
+        drawCashier(context);
+        drawTabs(context);
+
+        long bet = currentBet();
+        if (tab != Tab.SHOP) {
+            context.drawCenteredTextWithShadow(textRenderer,
+                    Text.translatable("gui.casinocraft.bet", Money.format(bet)),
+                    CONTENT_CENTER, BET_Y + 3, bet <= shownBalance ? C_TEXT : C_RED);
+            drawButton(context, BET_MINUS_X, BET_Y, BET_BTN_W, BET_BTN_H, Text.literal("<"), false,
+                    betIndex > 0 && !spinning && !rouletteSpinning, C_BTN);
+            drawButton(context, BET_PLUS_X, BET_Y, BET_BTN_W, BET_BTN_H, Text.literal(">"), false,
+                    betIndex < BET_STEPS.length - 1 && !spinning && !rouletteSpinning, C_BTN);
+        }
+
+        if (tab == Tab.SLOTS) {
+            drawSlots(context, now, bet);
+        } else if (tab == Tab.ROULETTE) {
+            drawRoulette(context, now, bet);
+        } else {
+            drawShop(context);
+        }
+
+        drawNotice(context, now);
+
+        if (tab == Tab.SHOP && searchField != null) {
+            searchField.setX(this.x + SHOP_SEARCH_X);
+            searchField.setY(this.y + SHOP_SEARCH_Y);
+            MatrixStack matrices = context.getMatrices();
+            matrices.push();
+            matrices.translate((float) -this.x, (float) -this.y, 0.0F);
+            searchField.render(context, mouseX, mouseY, 0.0F);
+            matrices.pop();
+            if (searchField.getText().isEmpty()) {
+                context.drawTextWithShadow(textRenderer, Text.translatable("gui.casinocraft.shop.search"),
+                        SHOP_SEARCH_X + 5, SHOP_SEARCH_Y + 3, 0xFF77778A);
+            }
+        }
+    }
+
+    private void drawCashier(DrawContext context) {
+        context.drawTextWithShadow(textRenderer, Text.translatable("gui.casinocraft.cashier"), 12, 29, C_GOLD);
+
+        long preview = depositPreview();
+        context.drawTextWithShadow(textRenderer,
+                Text.translatable("gui.casinocraft.to_sell", Money.format(preview)),
+                12, 84, preview > 0 ? C_TEXT : C_DIM);
+
+        drawButton(context, SELL_X, SELL_Y, SELL_W, SELL_H,
+                Text.translatable("gui.casinocraft.sell"), false, preview > 0, C_BTN);
+
+        drawButton(context, WITHDRAW_X, WITHDRAW_Y, WITHDRAW_W, WITHDRAW_H,
+                Text.translatable("gui.casinocraft.withdraw"), false, shownBalance >= 10, C_BTN);
+
+        context.drawTextWithShadow(textRenderer,
+                Text.translatable(tab == Tab.SHOP ? "gui.casinocraft.shop.hint" : "gui.casinocraft.hint"),
+                12, 134, C_DIM);
+    }
+
+    private void drawTabs(DrawContext context) {
+        drawButton(context, SLOT_TAB_X, TABS_Y, TAB_W, TAB_H,
+                Text.translatable("gui.casinocraft.tab.slots"), tab == Tab.SLOTS, true, C_BTN);
+        drawButton(context, ROULETTE_TAB_X, TABS_Y, TAB_W, TAB_H,
+                Text.translatable("gui.casinocraft.tab.roulette"), tab == Tab.ROULETTE, true, C_BTN);
+        drawButton(context, SHOP_TAB_X, TABS_Y, TAB_W, TAB_H,
+                Text.translatable("gui.casinocraft.tab.shop"), tab == Tab.SHOP, true, C_BTN);
+    }
+
+    private void drawSlots(DrawContext context, long now, long bet) {
+        SlotSymbol[] shown = new SlotSymbol[3];
+        for (int i = 0; i < 3; i++) {
+            shown[i] = spinning && now < reelStopAt[i]
+                    ? SlotSymbol.values()[(int) ((now / 70L + i * 3L) % SlotSymbol.values().length)]
+                    : reels[i];
+        }
+
+        boolean jackpot = !spinning && shown[0] == shown[1] && shown[1] == shown[2];
+        for (int i = 0; i < 3; i++) {
+            box(context, REEL_X[i], REEL_Y, REEL_SIZE, REEL_SIZE, 0xFF0B0B12,
+                    jackpot ? C_GOLD : 0xFF3A3A50);
+
+            MatrixStack matrices = context.getMatrices();
+            matrices.push();
+            matrices.translate(REEL_X[i] + REEL_SIZE / 2.0f, REEL_Y + 14.0f, 0.0f);
+            matrices.scale(2.0f, 2.0f, 1.0f);
+            context.drawCenteredTextWithShadow(textRenderer, Text.literal(shown[i].glyph), 0, 0, shown[i].color);
+            matrices.pop();
+        }
+
+        if (spinning) {
+            context.drawCenteredTextWithShadow(textRenderer,
+                    Text.translatable("gui.casinocraft.spinning"), CONTENT_CENTER, 118, C_DIM);
+        } else if (now < resultFlashUntil) {
+            Text result;
+            if (lastPayout <= 0) {
+                result = Text.translatable("gui.casinocraft.lose");
+            } else if (lastPayout == lastStake) {
+                result = Text.translatable("gui.casinocraft.return_bet", Money.format(lastPayout));
+            } else {
+                result = Text.translatable("gui.casinocraft.win", Money.format(lastPayout));
+            }
+            context.drawCenteredTextWithShadow(textRenderer, result, CONTENT_CENTER, 118,
+                    lastPayout > 0 ? (lastPayout > lastStake ? C_GREEN : C_GOLD) : C_RED);
+        } else {
+            context.drawCenteredTextWithShadow(textRenderer,
+                    Text.translatable("gui.casinocraft.paytable_hint"), CONTENT_CENTER, 118, C_DIM);
+        }
+
+        drawButton(context, SPIN_X, SPIN_Y, SPIN_W, SPIN_H,
+                Text.translatable("gui.casinocraft.spin_bet", Money.format(bet)),
+                false, !spinning && bet <= shownBalance, C_BTN);
+    }
+
+    private void drawRoulette(DrawContext context, long now, long bet) {
+        int center;
+        if (rouletteSpinning) {
+            center = (int) (((now - rouletteStart) / 55L) % 37L);
+            if (center < 0) {
+                center = 0;
+            }
+        } else {
+            center = Math.max(0, rouletteTarget);
+        }
+
+        for (int k = -2; k <= 2; k++) {
+            int number = Math.floorMod(center + k, 37);
+            drawNumberCell(context, 158 + (k + 2) * ROULETTE_CELL_STEP, ROULETTE_STRIP_Y,
+                    ROULETTE_CELL_W, 32, number, k == 0);
+        }
+
+        for (int i = 0; i < RouletteBet.values().length; i++) {
+            RouletteBet type = RouletteBet.values()[i];
+            int base = switch (type) {
+                case RED -> 0xFF7E2A26;
+                case BLACK -> 0xFF222228;
+                case ZERO -> 0xFF1E7A3C;
+                default -> C_BTN;
+            };
+            drawButton(context, 158 + i * ROULETTE_CELL_STEP, ROULETTE_BETS_Y, ROULETTE_CELL_W, 14,
+                    Text.translatable(type.translationKey), rouletteBet == type, true, base);
+        }
+
+        if (rouletteSpinning) {
+            context.drawCenteredTextWithShadow(textRenderer,
+                    Text.translatable("gui.casinocraft.spinning"), CONTENT_CENTER, 120, C_DIM);
+        } else if (rouletteTarget >= 0) {
+            Text result = roulettePayout > 0
+                    ? Text.translatable("gui.casinocraft.roulette.result",
+                    String.valueOf(rouletteTarget), Money.format(roulettePayout))
+                    : Text.translatable("gui.casinocraft.roulette.result_loss",
+                    String.valueOf(rouletteTarget), Money.format(rouletteStake));
+            context.drawCenteredTextWithShadow(textRenderer, result, CONTENT_CENTER, 120,
+                    now < rouletteFlashUntil ? (roulettePayout > 0 ? C_GREEN : C_RED) : C_DIM);
+        } else {
+            context.drawCenteredTextWithShadow(textRenderer,
+                    Text.translatable("gui.casinocraft.roulette.hint"), CONTENT_CENTER, 120, C_DIM);
+        }
+
+        drawButton(context, SPIN_X, SPIN_Y, SPIN_W, SPIN_H,
+                Text.translatable("gui.casinocraft.spin_bet", Money.format(bet)),
+                false, !rouletteSpinning && bet <= shownBalance, C_BTN);
+    }
+
+    private void drawNumberCell(DrawContext context, int x, int y, int w, int h, int number, boolean highlighted) {
+        int fill = number == 0 ? 0xFF1E7A3C : (Roulette.isRed(number) ? 0xFFB0322A : 0xFF26262E);
+        box(context, x, y, w, h, fill, highlighted ? C_GOLD : 0xFF3A3A50);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(String.valueOf(number)),
+                x + w / 2, y + 12, 0xFFFFFFFF);
+    }
+
+    private void drawShop(DrawContext context) {
+        List<Item> items = visibleShop();
+        if (items.isEmpty()) {
+            context.drawCenteredTextWithShadow(textRenderer,
+                    Text.translatable(shopQuery.trim().isEmpty()
+                            ? "gui.casinocraft.shop.empty"
+                            : "gui.casinocraft.shop.not_found"), CONTENT_CENTER, 80, C_DIM);
+            return;
+        }
+
+        int maxRow = maxShopRow(items.size());
+        shopRow = Math.max(0, Math.min(shopRow, maxRow));
+        int start = shopRow * SHOP_COLUMNS;
+
+        Text hoveredName = null;
+        for (int i = 0; i < SHOP_COLUMNS * SHOP_ROWS; i++) {
+            int index = start + i;
+            if (index >= items.size()) {
+                break;
+            }
+            Item item = items.get(index);
+            long price = ItemPrices.shopPrice(item);
+            int x = SHOP_X + (i % SHOP_COLUMNS) * SHOP_STEP_X;
+            int y = SHOP_Y + (i / SHOP_COLUMNS) * SHOP_STEP_Y;
+            boolean hovered = inside(localMouseX, localMouseY, x, y, SHOP_CELL_W, SHOP_CELL_H);
+
+            box(context, x, y, SHOP_CELL_W, SHOP_CELL_H,
+                    hovered ? 0xFF262636 : 0xFF141420, hovered ? C_GOLD : 0xFF34344A);
+            context.drawItem(new ItemStack(item), x + (SHOP_CELL_W - 16) / 2, y + 4);
+            Text priceText = Text.literal(Money.format(price));
+            context.drawCenteredTextWithShadow(textRenderer, priceText, x + SHOP_CELL_W / 2, y + 25,
+                    price <= shownBalance ? C_GOLD : C_RED);
+
+            if (hovered) {
+                hoveredName = new ItemStack(item).getName();
+            }
+        }
+
+        drawShopScrollbar(context, items.size(), maxRow);
+
+        context.drawCenteredTextWithShadow(textRenderer,
+                Text.literal((shopRow + 1) + "/" + (maxRow + 1)),
+                311, SHOP_SEARCH_Y + 3, C_DIM);
+
+        if (hoveredName != null) {
+            drawFloatingText(context, hoveredName);
+        }
+    }
+
+    private void drawShopScrollbar(DrawContext context, int size, int maxRow) {
+        int totalRows = (size + SHOP_COLUMNS - 1) / SHOP_COLUMNS;
+        context.fill(SHOP_SCROLL_X, SHOP_Y, SHOP_SCROLL_X + 3, SHOP_Y + SHOP_SCROLL_H, 0xFF0A0A10);
+        int thumbHeight = Math.max(10, SHOP_SCROLL_H * SHOP_ROWS / Math.max(1, totalRows));
+        int thumbY = SHOP_Y + (maxRow <= 0 ? 0 : (SHOP_SCROLL_H - thumbHeight) * shopRow / maxRow);
+        context.fill(SHOP_SCROLL_X, thumbY, SHOP_SCROLL_X + 3, thumbY + thumbHeight, C_GOLD);
+    }
+
+    private List<Item> visibleShop() {
+        if (!filterDirty && filteredCatalog != null) {
+            return filteredCatalog;
+        }
+        if (sortedCatalog == null) {
+            sortedCatalog = new ArrayList<>(ItemPrices.shopItems());
+            nameCache = new HashMap<>();
+            for (Item item : sortedCatalog) {
+                nameCache.put(item, new ItemStack(item).getName().getString().toLowerCase(Locale.ROOT));
+            }
+            sortedCatalog.sort(Comparator.comparing(item -> nameCache.get(item)));
+        }
+        String query = shopQuery.trim().toLowerCase(Locale.ROOT);
+        filteredCatalog = new ArrayList<>();
+        for (Item item : sortedCatalog) {
+            if (query.isEmpty()
+                    || nameCache.get(item).contains(query)
+                    || Registries.ITEM.getId(item).toString().contains(query)) {
+                filteredCatalog.add(item);
+            }
+        }
+        shopRow = 0;
+        filterDirty = false;
+        return filteredCatalog;
+    }
+
+    private static int maxShopRow(int size) {
+        int totalRows = (size + SHOP_COLUMNS - 1) / SHOP_COLUMNS;
+        return Math.max(0, totalRows - SHOP_ROWS);
+    }
+
+    private void drawFloatingText(DrawContext context, Text text) {
+        int width = textRenderer.getWidth(text);
+        int x = (int) localMouseX + 10;
+        int y = (int) localMouseY - 12;
+        if (x + width + 4 > CasinoLayout.WIDTH) {
+            x = CasinoLayout.WIDTH - width - 4;
+        }
+        if (y < 0) {
+            y = 0;
+        }
+        context.fill(x - 3, y - 3, x + width + 3, y + 11, 0xF0100018);
+        context.fill(x - 3, y - 3, x + width + 3, y - 2, 0xFF7A1F2B);
+        context.drawTextWithShadow(textRenderer, text, x, y, 0xFFFFFFFF);
+    }
+
+    private void drawNotice(DrawContext context, long now) {
+        if (noticeKey.isEmpty() || now >= noticeUntil) {
+            return;
+        }
+        Text text = Text.translatable(noticeKey, Text.literal(Money.format(noticeAmount)));
+        int width = textRenderer.getWidth(text);
+        context.fill(8, CasinoLayout.NOTICE_Y - 3, CasinoLayout.WIDTH - 8, CasinoLayout.NOTICE_Y + 11, 0xB008080C);
+        context.drawTextWithShadow(textRenderer, text, (CasinoLayout.WIDTH - width) / 2,
+                CasinoLayout.NOTICE_Y, noticePositive ? C_GREEN : C_RED);
+    }
+
+    private void drawButton(DrawContext context, int x, int y, int w, int h, Text label,
+                            boolean active, boolean enabled, int baseColor) {
+        boolean hovered = enabled && inside(localMouseX, localMouseY, x, y, w, h);
+        int background = !enabled ? 0xFF1A1A22 : active ? 0xFF6E1F2A : hovered ? C_BTN_HOVER : baseColor;
+        context.fill(x, y, x + w, y + h, background);
+        context.fill(x, y, x + w, y + 1, active ? C_GOLD : C_BTN_EDGE);
+        context.fill(x, y + h - 1, x + w, y + h, 0xFF14141C);
+        int color = !enabled ? 0xFF6A6A7A : active ? 0xFFFFD9A0 : C_TEXT;
+        context.drawCenteredTextWithShadow(textRenderer, label, x + w / 2, y + (h - 8) / 2, color);
+    }
+
+    private static void box(DrawContext context, int x, int y, int w, int h, int fill, int border) {
+        context.fill(x, y, x + w, y + h, fill);
+        context.fill(x, y, x + w, y + 1, border);
+        context.fill(x, y + h - 1, x + w, y + h, border);
+        context.fill(x, y, x + 1, y + h, border);
+        context.fill(x + w - 1, y, x + w, y + h, border);
+    }
+
+    private static void slotFrame(DrawContext context, int x, int y) {
+        context.fill(x - 1, y - 1, x + 17, y + 17, 0xFF07070B);
+        context.fill(x - 1, y - 1, x + 17, y, 0xFF2C2C3C);
+        context.fill(x - 1, y - 1, x, y + 17, 0xFF2C2C3C);
+        context.fill(x + 16, y, x + 17, y + 17, 0xFF15151F);
+        context.fill(x, y + 16, x + 17, y + 17, 0xFF15151F);
+    }
+
+    private static boolean inside(double px, double py, int x, int y, int w, int h) {
+        return px >= x && px < x + w && py >= y && py < y + h;
+    }
+
+    // -------------------------------------------------------------- ввод
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        double px = mouseX - this.x;
+        double py = mouseY - this.y;
+
+        if (button == 0) {
+            if (tab == Tab.SHOP && searchField != null
+                    && inside(px, py, SHOP_SEARCH_X, SHOP_SEARCH_Y, SHOP_SEARCH_W, SHOP_SEARCH_H)) {
+                searchField.setFocused(true);
+                searchField.mouseClicked(mouseX, mouseY, button);
+                return true;
+            }
+            if (searchField != null && searchField.isFocused()) {
+                searchField.setFocused(false);
+            }
+            if (inside(px, py, SLOT_TAB_X, TABS_Y, TAB_W, TAB_H)) {
+                tab = Tab.SLOTS;
+                return true;
+            }
+            if (inside(px, py, ROULETTE_TAB_X, TABS_Y, TAB_W, TAB_H)) {
+                tab = Tab.ROULETTE;
+                return true;
+            }
+            if (inside(px, py, SHOP_TAB_X, TABS_Y, TAB_W, TAB_H)) {
+                tab = Tab.SHOP;
+                return true;
+            }
+            if (inside(px, py, SELL_X, SELL_Y, SELL_W, SELL_H)) {
+                if (depositPreview() > 0) {
+                    ClientPlayNetworking.send(ModNetworking.SELL, PacketByteBufs.create());
+                }
+                return true;
+            }
+            if (inside(px, py, WITHDRAW_X, WITHDRAW_Y, WITHDRAW_W, WITHDRAW_H)) {
+                if (shownBalance >= 10) {
+                    ClientPlayNetworking.send(ModNetworking.WITHDRAW, PacketByteBufs.create());
+                }
+                return true;
+            }
+            if (tab != Tab.SHOP && inside(px, py, BET_MINUS_X, BET_Y, BET_BTN_W, BET_BTN_H)) {
+                changeBet(-1);
+                return true;
+            }
+            if (tab != Tab.SHOP && inside(px, py, BET_PLUS_X, BET_Y, BET_BTN_W, BET_BTN_H)) {
+                changeBet(1);
+                return true;
+            }
+            if (tab != Tab.SHOP && inside(px, py, SPIN_X, SPIN_Y, SPIN_W, SPIN_H)) {
+                if (tab == Tab.SLOTS) {
+                    spinSlots();
+                } else {
+                    spinRoulette();
+                }
+                return true;
+            }
+            if (tab == Tab.ROULETTE) {
+                for (int i = 0; i < RouletteBet.values().length; i++) {
+                    if (inside(px, py, 158 + i * ROULETTE_CELL_STEP, ROULETTE_BETS_Y,
+                            ROULETTE_CELL_W, 14)) {
+                        rouletteBet = RouletteBet.values()[i];
+                        return true;
+                    }
+                }
+            }
+            if (tab == Tab.SHOP && handleShopClick(px, py)) {
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private boolean handleShopClick(double px, double py) {
+        List<Item> items = visibleShop();
+        if (items.isEmpty()) {
+            return false;
+        }
+        int maxRow = maxShopRow(items.size());
+        if (inside(px, py, SHOP_SCROLL_X - 3, SHOP_Y, 9, SHOP_SCROLL_H) && maxRow > 0) {
+            double ratio = (py - SHOP_Y - 4.0) / (SHOP_SCROLL_H - 8.0);
+            shopRow = (int) Math.round(Math.max(0.0, Math.min(1.0, ratio)) * maxRow);
+            return true;
+        }
+        int start = shopRow * SHOP_COLUMNS;
+        for (int i = 0; i < SHOP_COLUMNS * SHOP_ROWS; i++) {
+            int index = start + i;
+            if (index >= items.size()) {
+                break;
+            }
+            int x = SHOP_X + (i % SHOP_COLUMNS) * SHOP_STEP_X;
+            int y = SHOP_Y + (i / SHOP_COLUMNS) * SHOP_STEP_Y;
+            if (inside(px, py, x, y, SHOP_CELL_W, SHOP_CELL_H)) {
+                buy(items.get(index), net.minecraft.client.gui.screen.Screen.hasShiftDown() ? 64 : 1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        if (tab == Tab.SHOP) {
+            int maxRow = maxShopRow(visibleShop().size());
+            shopRow = Math.max(0, Math.min(maxRow, shopRow - (int) Math.signum(amount)));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (tab == Tab.SHOP && searchField != null && searchField.isFocused()) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_ENTER
+                    || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                searchField.setFocused(false);
+                return true;
+            }
+            searchField.keyPressed(keyCode, scanCode, modifiers);
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (tab == Tab.SHOP && searchField != null && searchField.isFocused()) {
+            searchField.charTyped(chr, modifiers);
+            return true;
+        }
+        return super.charTyped(chr, modifiers);
+    }
+
+    private void buy(Item item, int requested) {
+        long price = ItemPrices.shopPrice(item);
+        if (price <= 0L) {
+            return;
+        }
+        long affordable = shownBalance / price;
+        int count = (int) Math.min(requested, affordable);
+        if (count <= 0) {
+            showLocalNotice("message.casinocraft.not_enough", shownBalance);
+            return;
+        }
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeIdentifier(Registries.ITEM.getId(item));
+        buf.writeVarInt(count);
+        ClientPlayNetworking.send(ModNetworking.BUY, buf);
+    }
+
+    private void changeBet(int direction) {
+        if (spinning || rouletteSpinning) {
+            return;
+        }
+        betIndex = Math.max(0, Math.min(BET_STEPS.length - 1, betIndex + direction));
+    }
+
+    private long currentBet() {
+        return BET_STEPS[betIndex];
+    }
+
+    private long depositPreview() {
+        long total = 0L;
+        for (int i = 0; i < CasinoScreenHandler.DEPOSIT_SLOTS; i++) {
+            total += ItemPrices.totalPrice(this.handler.getDeposit().getStack(i));
+        }
+        return total;
+    }
+
+    // --------------------------------------------------------- анимации
+
+    private void spinSlots() {
+        if (spinning) {
+            return;
+        }
+        long bet = currentBet();
+        if (bet > shownBalance) {
+            showLocalNotice("message.casinocraft.not_enough", shownBalance);
+            return;
+        }
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeVarInt((int) bet);
+        ClientPlayNetworking.send(ModNetworking.SPIN_SLOTS, buf);
+
+        spinning = true;
+        spinStart = Util.getMeasuringTimeMs();
+        for (int i = 0; i < 3; i++) {
+            reelStopAt[i] = spinStart + 650L + i * 240L;
+        }
+        pendingReels = null;
+        lastPayout = 0L;
+        lastStake = bet;
+        resultFlashUntil = 0L;
+    }
+
+    private void spinRoulette() {
+        if (rouletteSpinning) {
+            return;
+        }
+        long bet = currentBet();
+        if (bet > shownBalance) {
+            showLocalNotice("message.casinocraft.not_enough", shownBalance);
+            return;
+        }
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeVarInt((int) bet);
+        buf.writeVarInt(rouletteBet.ordinal());
+        ClientPlayNetworking.send(ModNetworking.SPIN_ROULETTE, buf);
+
+        rouletteSpinning = true;
+        rouletteStart = Util.getMeasuringTimeMs();
+        rouletteTarget = -1;
+        roulettePayout = 0L;
+        rouletteStake = bet;
+        rouletteFlashUntil = 0L;
+    }
+
+    private void updateAnimations(long now) {
+        if (spinning) {
+            if (pendingReels != null) {
+                for (int i = 0; i < 3; i++) {
+                    if (now >= reelStopAt[i]) {
+                        reels[i] = pendingReels[i];
+                    }
+                }
+                if (now >= reelStopAt[2] + 220L) {
+                    spinning = false;
+                    reels[0] = pendingReels[0];
+                    reels[1] = pendingReels[1];
+                    reels[2] = pendingReels[2];
+                    shownBalance = pendingBalance;
+                    lastPayout = pendingPayout;
+                    resultFlashUntil = now + 5000L;
+                    pendingReels = null;
+                }
+            } else if (now > spinStart + 3000L) {
+                spinning = false;
+            }
+        } else if (rouletteSpinning) {
+            if (rouletteTarget >= 0 && now >= rouletteStart + 1400L) {
+                rouletteSpinning = false;
+                shownBalance = rouletteBalance;
+                rouletteFlashUntil = now + 5000L;
+            }
+        } else {
+            shownBalance = this.handler.getBalance();
+        }
+    }
+
+    // --------------------------------------------------------- пакеты
+
+    public void onSlotsResult(int a, int b, int c, long payout, long stake, long newBalance) {
+        SlotSymbol[] symbols = SlotSymbol.values();
+        pendingReels = new SlotSymbol[]{
+                symbols[Math.floorMod(a, symbols.length)],
+                symbols[Math.floorMod(b, symbols.length)],
+                symbols[Math.floorMod(c, symbols.length)]
+        };
+        pendingPayout = payout;
+        lastStake = stake;
+        pendingBalance = newBalance;
+    }
+
+    public void onRouletteResult(int number, long payout, long stake, long newBalance) {
+        rouletteTarget = number;
+        roulettePayout = payout;
+        rouletteStake = stake;
+        rouletteBalance = newBalance;
+    }
+
+    public void onNotice(String key, long amount) {
+        showLocalNotice(key, amount);
+        noticePositive = key.endsWith("sold") || key.endsWith("sold_partial")
+                || key.endsWith("withdrawn") || key.endsWith("bought");
+    }
+
+    private void showLocalNotice(String key, long amount) {
+        noticeKey = key;
+        noticeAmount = amount;
+        noticePositive = false;
+        noticeUntil = Util.getMeasuringTimeMs() + 4500L;
+    }
+}

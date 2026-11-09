@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "casinocraft",
+  "version": "${version}",
+  "name": "CasinoCraft",
+  "description": "Казино в Minecraft: слоты, рулетка и касса, куда можно сдавать предметы за деньги.",
+  "authors": [
+    "CasinoCraft"
+  ],
+  "license": "MIT",
+  "icon": "assets/casinocraft/icon.png",
+  "environment": "*",
+  "accessWidener": "casinocraft.accesswidener",
+  "entrypoints": {
+    "main": [
+      "com.casinocraft.CasinoCraftMod"
+    ],
+    "client": [
+      "com.casinocraft.client.CasinoCraftClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
