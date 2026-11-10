@@ -4,6 +4,8 @@ All notable changes to CasinoCraft.
 
 ## 1.7.0 (unreleased)
 
+* Added BIG/MEGA/EPIC win celebrations at 10×/25×/100× total stake: bounded coin showers, soft glow, payout count-up and separately labeled net profit. Click finishes the counter; Esc, tabs, paytable and new spins dismiss it. Works for slots and roulette.
+
 * Replaced three-symbol slots with a 5×3 video slot, five fixed lines and Wild substitution. One total stake is split equally across lines; only the best left-to-right award is paid per line.
 * Added smooth staggered reel stops, an in-game paytable, cycling winning-line highlights and a five-sevens line jackpot (Wilds allowed).
 * New paytable has a theoretical return of 96.1830768%, verified by exhaustive weighted line enumeration. Pairs no longer pay.

@@ -65,5 +65,11 @@
   "gui.casinocraft.line_stake": "Линия: %s | W = любой",
   "gui.casinocraft.slot_payout": "ВЫПЛАТА: %s",
   "gui.casinocraft.total_bet": "ВСЕГО %s",
-  "message.casinocraft.invalid_slot_bet": "Ставка слотов должна быть кратна %s"
+  "message.casinocraft.invalid_slot_bet": "Ставка слотов должна быть кратна %s",
+  "gui.casinocraft.big_win": "КРУПНЫЙ ВЫИГРЫШ",
+  "gui.casinocraft.mega_win": "МЕГАВЫИГРЫШ",
+  "gui.casinocraft.epic_win": "ЭПИЧЕСКИЙ ВЫИГРЫШ",
+  "gui.casinocraft.jackpot_title": "ДЖЕКПОТ",
+  "gui.casinocraft.net_profit": "Прибыль +%s",
+  "gui.casinocraft.skip_count": "Клик — вся сумма | Esc — закрыть"
 }

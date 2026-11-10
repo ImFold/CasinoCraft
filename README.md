@@ -112,6 +112,8 @@ The mod is built to survive players who like spreadsheets:
 * **Withdraw limit.** 38 400 per click (6 stacks) to avoid dumping thousands of item entities.
 * **Durability matters.** A used sword is worth less than a new one.
 
+Large payouts get a client-only celebration: **BIG ≥10×**, **MEGA ≥25×**, **EPIC ≥100×** of the total stake. A gold coin shower and animated payout counter show the already-settled server result; net profit is labeled separately. Click the banner to reveal the full payout, press Esc to dismiss, or start another spin. Changing tabs or opening the paytable also dismisses it. The Minecraft particle setting controls coin density; Minimal disables coins. The roulette uses a compact banner above its bet buttons.
+
 ### Video slot rules
 
 * The displayed stake is the **total spin cost**, divided equally over all five lines; no extra charge per line. Stakes must be divisible by 5.

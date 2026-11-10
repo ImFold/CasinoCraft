@@ -156,6 +156,8 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     private long rouletteFlashUntil;
     private long rouletteRevealAt = -1L;
     private final CasinoVfx rouletteEffects = new CasinoVfx();
+    private final BigWinAnimation bigWin = new BigWinAnimation();
+    private Tab bigWinTab = Tab.SLOTS;
 
     private String noticeKey = "";
     private long noticeAmount;
@@ -253,6 +255,9 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
             drawShop(context);
         }
 
+        if (tab == bigWinTab && bigWin.active(now) && (tab != Tab.SLOTS || !showPaytable)) {
+            drawBigWin(context, now);
+        }
         drawNotice(context, now);
 
         if (tab == Tab.SHOP && searchField != null) {
@@ -522,6 +527,57 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         };
     }
 
+    private boolean startBigWin(Tab game, long now, long payout, long stake, boolean jackpot) {
+        if (tab != game || (game == Tab.SLOTS && showPaytable)) {
+            return false;
+        }
+        if (!bigWin.start(now, payout, stake, jackpot)) {
+            return false;
+        }
+        bigWinTab = game;
+        slotEffects.clear();
+        rouletteEffects.clear();
+        return true;
+    }
+
+    private void drawBigWin(DrawContext context, long now) {
+        float opacity = bigWin.opacity(now);
+        if (opacity < 0.04f) {
+            return;
+        }
+        boolean compact = tab == Tab.ROULETTE;
+        int left = 156;
+        int top = 64;
+        int right = 331;
+        int bottom = compact ? 100 : 115;
+        int accent = bigWin.tier().color;
+        context.fill(left, top, right, bottom, BigWinVfx.tint(0x100C18, opacity * 0.96f));
+        for (int inset = 0; inset < 5; inset++) {
+            context.fill(left + inset, top + inset, right - inset, top + inset + 1,
+                    BigWinVfx.tint(accent, opacity * (0.25f - inset * 0.04f)));
+            context.fill(left + inset, bottom - inset - 1, right - inset, bottom - inset,
+                    BigWinVfx.tint(accent, opacity * (0.25f - inset * 0.04f)));
+        }
+        CasinoVfx.glow(context::fill, left + 4, top + 4, right - left - 8, bottom - top - 8,
+                accent, opacity * 0.65f);
+        BigWinVfx.draw(context::fill, bigWin.elapsed(now), effectParticleCount(bigWin.tier().coins),
+                opacity, left, top, right, bottom, accent);
+        // Text is drawn last so flying coins never obscure the amount.
+        String title = bigWin.jackpot() ? "gui.casinocraft.jackpot_title" : bigWin.tier().titleKey;
+        float entrance = bigWin.textScale(now);
+        drawFittedText(context, Text.translatable(title), CONTENT_CENTER, compact ? 66 : 68, 156,
+                BigWinVfx.tint(accent, opacity), (compact ? 0.78f : 1.15f) * entrance);
+        drawFittedText(context, Text.literal(Money.format(bigWin.displayedPayout(now))),
+                CONTENT_CENTER, compact ? 76 : 82, 150,
+                BigWinVfx.tint(0xFFF4D4, opacity), (compact ? 1.1f : 1.6f) * entrance);
+        drawFittedText(context, Text.translatable("gui.casinocraft.net_profit", Money.format(bigWin.profit())),
+                CONTENT_CENTER, compact ? 90 : 100, 156, BigWinVfx.tint(0xA6EDB5, opacity), 0.65f);
+        if (!compact) {
+            drawFittedText(context, Text.translatable("gui.casinocraft.skip_count"), CONTENT_CENTER,
+                    109, 156, BigWinVfx.tint(C_DIM, opacity), 0.55f);
+        }
+    }
+
     private void drawShop(DrawContext context) {
         List<Item> items = visibleShop();
         if (items.isEmpty()) {
@@ -689,10 +745,16 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         double py = mouseY - this.y;
 
         if (button == 0) {
+            if (tab == bigWinTab && bigWin.active(Util.getMeasuringTimeMs())
+                    && inside(px, py, 156, 64, 175, tab == Tab.ROULETTE ? 36 : 51)) {
+                bigWin.finishCounting(Util.getMeasuringTimeMs());
+                return true;
+            }
             if (tab == Tab.SLOTS) {
                 if ((!showPaytable && inside(px, py, 314, 116, 14, 14))
                         || (showPaytable && inside(px, py, 316, 51, 12, 12))) {
                     showPaytable = !showPaytable;
+                    bigWin.clear();
                     return true;
                 }
                 if (showPaytable && inside(px, py, 155, 49, 176, 82)) {
@@ -709,14 +771,17 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                 searchField.setFocused(false);
             }
             if (inside(px, py, SLOT_TAB_X, TABS_Y, TAB_W, TAB_H)) {
+                bigWin.clear();
                 tab = Tab.SLOTS;
                 return true;
             }
             if (inside(px, py, ROULETTE_TAB_X, TABS_Y, TAB_W, TAB_H)) {
+                bigWin.clear();
                 tab = Tab.ROULETTE;
                 return true;
             }
             if (inside(px, py, SHOP_TAB_X, TABS_Y, TAB_W, TAB_H)) {
+                bigWin.clear();
                 tab = Tab.SHOP;
                 return true;
             }
@@ -803,6 +868,10 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (bigWin.active(Util.getMeasuringTimeMs()) && keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            bigWin.clear();
+            return true;
+        }
         if (tab == Tab.SLOTS && showPaytable && keyCode == GLFW.GLFW_KEY_ESCAPE) {
             showPaytable = false;
             return true;
@@ -888,6 +957,7 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         buf.writeVarInt((int) bet);
         ClientPlayNetworking.send(ModNetworking.SPIN_SLOTS, buf);
 
+        bigWin.clear();
         spinning = true;
         spinStart = Util.getMeasuringTimeMs();
         showPaytable = false;
@@ -915,6 +985,7 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         buf.writeVarInt(rouletteBet.ordinal());
         ClientPlayNetworking.send(ModNetworking.SPIN_ROULETTE, buf);
 
+        bigWin.clear();
         rouletteSpinning = true;
         rouletteStart = Util.getMeasuringTimeMs();
         rouletteTarget = -1;
@@ -945,7 +1016,8 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                     resultFlashUntil = now + 5500L;
                     slotRevealAt = now;
                     lastJackpot = lastLines.stream().anyMatch(win -> win.symbol() == SlotSymbol.SEVEN && win.matches() == 5);
-                    if (lastPayout > lastStake) {
+                    boolean largeWin = startBigWin(Tab.SLOTS, now, lastPayout, lastStake, lastJackpot);
+                    if (lastPayout > lastStake && !largeWin) {
                         boolean bigWin = lastStake > 0L && (double) lastPayout / lastStake >= 10.0;
                         slotEffects.burst(CONTENT_CENTER, REEL_Y + CELL_H * SlotMachine.ROWS - 3,
                                 effectParticleCount(lastJackpot ? 64 : (bigWin ? 48 : 28)), bigWin, now);
@@ -959,7 +1031,8 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                 shownBalance = rouletteBalance;
                 rouletteFlashUntil = now + 5000L;
                 rouletteRevealAt = now;
-                if (roulettePayout > rouletteStake) {
+                boolean largeWin = startBigWin(Tab.ROULETTE, now, roulettePayout, rouletteStake, false);
+                if (roulettePayout > rouletteStake && !largeWin) {
                     boolean bigWin = rouletteStake > 0L && (double) roulettePayout / rouletteStake >= 10.0;
                     rouletteEffects.burst(CONTENT_CENTER, ROULETTE_STRIP_Y + 29,
                             effectParticleCount(bigWin ? 48 : 24), bigWin, now);

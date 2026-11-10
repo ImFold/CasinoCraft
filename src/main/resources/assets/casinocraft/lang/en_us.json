@@ -65,5 +65,11 @@
   "gui.casinocraft.line_stake": "Line: %s | W = any symbol",
   "gui.casinocraft.slot_payout": "PAYOUT: %s",
   "gui.casinocraft.total_bet": "TOTAL %s",
-  "message.casinocraft.invalid_slot_bet": "Slot stake must be a multiple of %s"
+  "message.casinocraft.invalid_slot_bet": "Slot stake must be a multiple of %s",
+  "gui.casinocraft.big_win": "BIG WIN",
+  "gui.casinocraft.mega_win": "MEGA WIN",
+  "gui.casinocraft.epic_win": "EPIC WIN",
+  "gui.casinocraft.jackpot_title": "JACKPOT",
+  "gui.casinocraft.net_profit": "Profit +%s",
+  "gui.casinocraft.skip_count": "Click to show total | Esc to dismiss"
 }
