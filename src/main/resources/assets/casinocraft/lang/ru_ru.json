@@ -19,6 +19,7 @@
   "gui.casinocraft.tab.roulette": "РУЛЕТКА",
   "gui.casinocraft.tab.shop": "МАГАЗИН",
   "gui.casinocraft.bet": "СТАВКА %s",
+  "gui.casinocraft.bet_line": "СТАВКА %s • %s/ЛИН",
   "gui.casinocraft.spinning": "Крутим...",
   "gui.casinocraft.win": "ВЫИГРЫШ: %s",
   "gui.casinocraft.jackpot": "ДЖЕКПОТ: %s",

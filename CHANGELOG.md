@@ -9,6 +9,8 @@ All notable changes to CasinoCraft.
 * Replaced three-symbol slots with a 5×3 video slot, five fixed lines and Wild substitution. One total stake is split equally across lines; only the best left-to-right award is paid per line.
 * Added smooth staggered reel stops, an in-game paytable, cycling winning-line highlights and a five-sevens line jackpot (Wilds allowed).
 * New paytable has a theoretical return of 96.1830768%, verified by exhaustive weighted line enumeration. Pairs no longer pay.
+* Casino-style cabinet: gold frame with animated bulbs, LED bet/win displays, larger symbol tiles, a red gradient spin button, and click, reel-stop and win sounds. Bulbs chase while spinning and flash on wins.
+* The paytable is a proper modal and no longer overlaps reels, bet or hint text; big-win overlays no longer leak the underlying game text. Reels were enlarged to fill the cabinet.
 * Slot results carry all 15 cells and the originating screen ID. Requires updating both server and clients.
 * Added regression tests for Wild rules, diagonal lines, total-stake accounting, maximum payouts, result packets and reel easing.
 
