@@ -45,9 +45,9 @@ CasinoCraft превращает ценность обычных предмет�
 |---|---|
 | ![Слоты](docs/screenshots/main.png) | ![Рулетка](docs/screenshots/roulette.png) |
 
-| Магазин | Вывод |
+| Магазин | Таблица выплат |
 |---|---|
-| ![Магазин](docs/screenshots/shop.png) | ![Вывод](docs/screenshots/withdraw.png) |
+| ![Магазин](docs/screenshots/shop.png) | ![Таблица выплат](docs/screenshots/paytable.png) |
 
 ## Установка
 

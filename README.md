@@ -1,4 +1,4 @@
-﻿# CasinoCraft
+# CasinoCraft
 
 **A full casino for Minecraft 1.20.1 (Fabric): cashier, slots, roulette, a shop for 1100+ items and physical chips.**
 
@@ -45,9 +45,9 @@ The images below show the earlier 1.5 interface; version 1.7 replaces the slot p
 |---|---|
 | ![Slots](docs/screenshots/main.png) | ![Roulette](docs/screenshots/roulette.png) |
 
-| Shop | Withdraw |
+| Shop | Paytable |
 |---|---|
-| ![Shop](docs/screenshots/shop.png) | ![Withdraw](docs/screenshots/withdraw.png) |
+| ![Shop](docs/screenshots/shop.png) | ![Paytable](docs/screenshots/paytable.png) |
 
 ## Installation
 

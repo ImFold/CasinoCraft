@@ -232,7 +232,7 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
         long now = Util.getMeasuringTimeMs();
 
-        context.drawTextWithShadow(textRenderer, Text.literal("КАЗИНО"), 10, 8, C_GOLD);
+        context.drawTextWithShadow(textRenderer, Text.translatable("gui.casinocraft.title"), 10, 8, C_GOLD);
         Text balanceText = Text.translatable("gui.casinocraft.balance", Money.format(shownBalance));
         context.drawTextWithShadow(textRenderer, balanceText,
                 CasinoLayout.WIDTH - 10 - textRenderer.getWidth(balanceText), 8, C_GOLD);
