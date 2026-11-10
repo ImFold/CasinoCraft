@@ -1,7 +1,7 @@
 package com.casinocraft.client;
 
 import com.casinocraft.CasinoLayout;
-import com.casinocraft.economy.ItemPrices;
+import com.casinocraft.economy.PriceSnapshot;
 import com.casinocraft.game.Roulette;
 import com.casinocraft.game.RouletteBet;
 import com.casinocraft.game.SlotSymbol;
@@ -23,6 +23,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -118,6 +119,7 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     private List<Item> filteredCatalog;
     private Map<Item, String> nameCache;
     private boolean filterDirty = true;
+    private PriceSnapshot catalogPrices;
 
     private long shownBalance;
     private double localMouseX;
@@ -164,9 +166,6 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         this.x = (this.width - this.backgroundWidth) / 2;
         this.y = (this.height - this.backgroundHeight) / 2;
         this.shownBalance = this.handler.getBalance();
-
-        MinecraftClient client = MinecraftClient.getInstance();
-        ItemPrices.ensureRecipes(client.world);
 
         this.searchField = new TextFieldWidget(textRenderer, this.x + SHOP_SEARCH_X, this.y + SHOP_SEARCH_Y,
                 SHOP_SEARCH_W, SHOP_SEARCH_H, Text.translatable("gui.casinocraft.shop.search"));
@@ -407,7 +406,7 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                 break;
             }
             Item item = items.get(index);
-            long price = ItemPrices.shopPrice(item);
+            long price = shopPrice(item);
             int x = SHOP_X + (i % SHOP_COLUMNS) * SHOP_STEP_X;
             int y = SHOP_Y + (i / SHOP_COLUMNS) * SHOP_STEP_Y;
             boolean hovered = inside(localMouseX, localMouseY, x, y, SHOP_CELL_W, SHOP_CELL_H);
@@ -444,11 +443,25 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     }
 
     private List<Item> visibleShop() {
+        PriceSnapshot prices = handler.getPrices();
+        if (catalogPrices != prices) {
+            catalogPrices = prices;
+            sortedCatalog = null;
+            filteredCatalog = null;
+            filterDirty = true;
+            shopRow = 0;
+        }
         if (!filterDirty && filteredCatalog != null) {
             return filteredCatalog;
         }
         if (sortedCatalog == null) {
-            sortedCatalog = new ArrayList<>(ItemPrices.shopItems());
+            sortedCatalog = new ArrayList<>();
+            prices.entries().forEach((rawId, entry) -> {
+                Identifier id = Identifier.tryParse(rawId);
+                if (entry.shop() > 0L && id != null && Registries.ITEM.containsId(id)) {
+                    sortedCatalog.add(Registries.ITEM.get(id));
+                }
+            });
             nameCache = new HashMap<>();
             for (Item item : sortedCatalog) {
                 nameCache.put(item, new ItemStack(item).getName().getString().toLowerCase(Locale.ROOT));
@@ -665,7 +678,7 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     }
 
     private void buy(Item item, int requested) {
-        long price = ItemPrices.shopPrice(item);
+        long price = shopPrice(item);
         if (price <= 0L) {
             return;
         }
@@ -678,7 +691,12 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeIdentifier(Registries.ITEM.getId(item));
         buf.writeVarInt(count);
+        buf.writeLong(price);
         ClientPlayNetworking.send(ModNetworking.BUY, buf);
+    }
+
+    private long shopPrice(Item item) {
+        return handler.getPrices().shopPrice(Registries.ITEM.getId(item).toString());
     }
 
     private void changeBet(int direction) {
@@ -695,7 +713,11 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     private long depositPreview() {
         long total = 0L;
         for (int i = 0; i < CasinoScreenHandler.DEPOSIT_SLOTS; i++) {
-            total += ItemPrices.totalPrice(this.handler.getDeposit().getStack(i));
+            ItemStack stack = this.handler.getDeposit().getStack(i);
+            if (!stack.isEmpty()) {
+                total += handler.getPrices().totalSellPrice(Registries.ITEM.getId(stack.getItem()).toString(),
+                        stack.getCount(), stack.getDamage(), stack.isDamageable() ? stack.getMaxDamage() : 0);
+            }
         }
         return total;
     }
@@ -814,3 +836,4 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         noticeUntil = Util.getMeasuringTimeMs() + 4500L;
     }
 }
+

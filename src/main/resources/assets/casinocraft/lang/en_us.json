@@ -39,6 +39,7 @@
   "gui.casinocraft.shop.empty": "The shop is empty",
   "gui.casinocraft.shop.not_found": "Nothing found",
 
+  "message.casinocraft.prices_changed": "Prices changed. Please try again.",
   "message.casinocraft.not_enough": "Not enough funds",
   "message.casinocraft.bet_too_small": "Minimum bet: %s",
   "message.casinocraft.bet_too_big": "Maximum bet: %s",
@@ -60,3 +61,4 @@
   "command.casinocraft.set": "Set balance for %s players: %s",
   "command.casinocraft.reload": "Item prices reloaded"
 }
+

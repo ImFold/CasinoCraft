@@ -3,6 +3,7 @@ package com.casinocraft.command;
 import com.casinocraft.economy.CasinoEconomy;
 import com.casinocraft.economy.ItemPrices;
 import com.casinocraft.economy.PlayerBalances;
+import com.casinocraft.network.ModNetworking;
 import com.casinocraft.util.Money;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -99,9 +100,11 @@ public final class CasinoCommands {
                                 .requires(source -> source.hasPermissionLevel(2))
                                 .executes(context -> {
                                     ItemPrices.load();
+                                    ModNetworking.refreshPrices(context.getSource().getServer());
                                     context.getSource().sendFeedback(
                                             () -> Text.translatable("command.casinocraft.reload"), true);
                                     return 1;
                                 }))));
     }
 }
+

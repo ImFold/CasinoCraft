@@ -1,6 +1,8 @@
 package com.casinocraft.client;
 
 import com.casinocraft.network.ModNetworking;
+import com.casinocraft.economy.PriceSnapshot;
+import com.casinocraft.screen.CasinoScreenHandler;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 
@@ -9,6 +11,17 @@ public final class ClientNetworking {
     }
 
     public static void register() {
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.PRICES, (client, handler, buf, sender) -> {
+            int syncId = buf.readVarInt();
+            PriceSnapshot prices = ModNetworking.readPrices(buf);
+            client.execute(() -> {
+                if (client.player != null
+                        && client.player.currentScreenHandler instanceof CasinoScreenHandler casino
+                        && casino.syncId == syncId) {
+                    casino.setPrices(prices);
+                }
+            });
+        });
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SLOTS_RESULT, (client, handler, buf, sender) -> {
             int a = buf.readVarInt();
             int b = buf.readVarInt();
@@ -49,3 +62,4 @@ public final class ClientNetworking {
         });
     }
 }
+

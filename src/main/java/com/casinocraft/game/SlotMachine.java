@@ -6,7 +6,8 @@ import net.minecraft.util.math.random.Random;
  * Логика слотов и таблица выплат.
  * <p>
  * Три одинаковых символа платят bet * tripleMultiplier, два одинаковых возвращают ставку.
- * Математическое ожидание при текущих весах ≈ 0.915 от ставки (перевес казино ≈ 8.5%).
+ * Математическое ожидание при текущих весах = 0.845946 от ставки
+ * (теоретический возврат 84.5946%, перевес казино 15.4054%).
  */
 public final class SlotMachine {
     private static final SlotSymbol[] SYMBOLS = SlotSymbol.values();
@@ -52,3 +53,4 @@ public final class SlotMachine {
         return 0L;
     }
 }
+

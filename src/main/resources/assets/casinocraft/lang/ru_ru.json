@@ -39,6 +39,7 @@
   "gui.casinocraft.shop.empty": "Магазин пуст",
   "gui.casinocraft.shop.not_found": "Ничего не найдено",
 
+  "message.casinocraft.prices_changed": "Цены изменились. Повторите покупку.",
   "message.casinocraft.not_enough": "Недостаточно средств",
   "message.casinocraft.bet_too_small": "Минимальная ставка: %s",
   "message.casinocraft.bet_too_big": "Максимальная ставка: %s",
@@ -60,3 +61,4 @@
   "command.casinocraft.set": "Установлен баланс %s игрокам: %s",
   "command.casinocraft.reload": "Цены предметов перезагружены"
 }
+

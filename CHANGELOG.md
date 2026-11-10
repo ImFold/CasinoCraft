@@ -2,6 +2,15 @@
 
 All notable changes to CasinoCraft.
 
+## Unreleased
+
+* Shop prices, catalogue and cashier previews now use per-screen server price snapshots.
+* Price and data-pack reloads rebuild the price cache and refresh open casino screens.
+* Purchases with an outdated displayed price are rejected without charging.
+* Corrected the documented slot return to 84.5946% (house edge 15.4054%); payouts are unchanged.
+* Added regression tests for slot returns, price snapshots and packet serialization.
+* Requires updating both server and clients because the purchase packet format changed.
+
 ## 1.5.1
 
 * Smithing recipes are now read (via access widener), so netherite gear is priced from
@@ -47,3 +56,4 @@ All notable changes to CasinoCraft.
 ## 1.0.0
 
 * Initial release: cashier, slots, roulette, `/casino` commands, JSON prices.
+

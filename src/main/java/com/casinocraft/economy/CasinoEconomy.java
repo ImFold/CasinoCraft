@@ -129,7 +129,7 @@ public final class CasinoEconomy {
      * Покупка предмета из магазина. Цена приходит из конфига, но всегда
      * проверяется на сервере и не может быть ниже цены скупки с наценкой.
      */
-    public static void buy(ServerPlayerEntity player, Identifier itemId, int count) {
+    public static void buy(ServerPlayerEntity player, Identifier itemId, int count, long quotedPrice) {
         if (!(player.currentScreenHandler instanceof CasinoScreenHandler)) {
             return;
         }
@@ -140,6 +140,11 @@ public final class CasinoEconomy {
         }
         long price = ItemPrices.shopPrice(item);
         if (price <= 0L || count <= 0) {
+            return;
+        }
+        if (quotedPrice != price) {
+            ModNetworking.sendPrices(player);
+            sendNotice(player, "message.casinocraft.prices_changed", 0L);
             return;
         }
         int safeCount = Math.min(count, 64);
@@ -237,3 +242,4 @@ public final class CasinoEconomy {
         ServerPlayNetworking.send(player, ModNetworking.NOTICE, buf);
     }
 }
+
