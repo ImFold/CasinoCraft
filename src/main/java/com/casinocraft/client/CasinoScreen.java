@@ -135,6 +135,9 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     private long lastPayout;
     private long lastStake;
     private long resultFlashUntil;
+    private long slotRevealAt = -1L;
+    private boolean lastJackpot;
+    private final CasinoVfx slotEffects = new CasinoVfx();
 
     private RouletteBet rouletteBet = RouletteBet.RED;
     private boolean rouletteSpinning;
@@ -144,6 +147,8 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     private long rouletteStake;
     private long rouletteBalance;
     private long rouletteFlashUntil;
+    private long rouletteRevealAt = -1L;
+    private final CasinoVfx rouletteEffects = new CasinoVfx();
 
     private String noticeKey = "";
     private long noticeAmount;
@@ -291,17 +296,34 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                     : reels[i];
         }
 
-        boolean jackpot = !spinning && shown[0] == shown[1] && shown[1] == shown[2];
+        boolean jackpot = !spinning && now < resultFlashUntil
+                && shown[0] == shown[1] && shown[1] == shown[2];
         for (int i = 0; i < 3; i++) {
             box(context, REEL_X[i], REEL_Y, REEL_SIZE, REEL_SIZE, 0xFF0B0B12,
                     jackpot ? C_GOLD : 0xFF3A3A50);
 
+            boolean reelMoving = spinning && now < reelStopAt[i];
+            if (reelMoving) {
+                drawReelTrail(context, REEL_X[i], now - spinStart + i * 140L);
+            }
+            float landing = spinning && pendingReels != null
+                    ? CasinoVfx.envelope(now, reelStopAt[i], 240) : 0.0f;
+            float winGlow = !spinning && lastPayout > lastStake
+                    ? CasinoVfx.envelope(now, slotRevealAt, lastJackpot ? 2200 : 1500) : 0.0f;
+            CasinoVfx.glow(context::fill, REEL_X[i], REEL_Y, REEL_SIZE, REEL_SIZE,
+                    C_GOLD, Math.max(landing, winGlow));
+
             MatrixStack matrices = context.getMatrices();
             matrices.push();
             matrices.translate(REEL_X[i] + REEL_SIZE / 2.0f, REEL_Y + 14.0f, 0.0f);
-            matrices.scale(2.0f, 2.0f, 1.0f);
+            float scale = 2.0f + landing * 0.12f + winGlow * 0.10f;
+            matrices.scale(scale, scale, 1.0f);
             context.drawCenteredTextWithShadow(textRenderer, Text.literal(shown[i].glyph), 0, 0, shown[i].color);
             matrices.pop();
+        }
+
+        if (effectParticleCount(1) > 0) {
+            slotEffects.render(context::fill, now, 155, 65, 333, 116);
         }
 
         if (spinning) {
@@ -314,10 +336,11 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
             } else if (lastPayout == lastStake) {
                 result = Text.translatable("gui.casinocraft.return_bet", Money.format(lastPayout));
             } else {
-                result = Text.translatable("gui.casinocraft.win", Money.format(lastPayout));
+                result = Text.translatable(lastJackpot ? "gui.casinocraft.jackpot" : "gui.casinocraft.win",
+                        Money.format(lastPayout));
             }
             context.drawCenteredTextWithShadow(textRenderer, result, CONTENT_CENTER, 118,
-                    lastPayout > 0 ? (lastPayout > lastStake ? C_GREEN : C_GOLD) : C_RED);
+                    lastPayout > 0 ? (lastJackpot ? C_GOLD : (lastPayout > lastStake ? C_GREEN : C_GOLD)) : C_RED);
         } else {
             context.drawCenteredTextWithShadow(textRenderer,
                     Text.translatable("gui.casinocraft.paytable_hint"), CONTENT_CENTER, 118, C_DIM);
@@ -343,6 +366,15 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
             int number = Math.floorMod(center + k, 37);
             drawNumberCell(context, 158 + (k + 2) * ROULETTE_CELL_STEP, ROULETTE_STRIP_Y,
                     ROULETTE_CELL_W, 32, number, k == 0);
+        }
+
+        float landing = !rouletteSpinning
+                ? CasinoVfx.envelope(now, rouletteRevealAt, roulettePayout > rouletteStake ? 1700 : 450)
+                : 0.0f;
+        CasinoVfx.glow(context::fill, 158 + 2 * ROULETTE_CELL_STEP, ROULETTE_STRIP_Y,
+                ROULETTE_CELL_W, 32, roulettePayout > rouletteStake ? C_GOLD : C_DIM, landing);
+        if (effectParticleCount(1) > 0) {
+            rouletteEffects.render(context::fill, now, 155, 64, 333, 100);
         }
 
         for (int i = 0; i < RouletteBet.values().length; i++) {
@@ -383,6 +415,26 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         box(context, x, y, w, h, fill, highlighted ? C_GOLD : 0xFF3A3A50);
         context.drawCenteredTextWithShadow(textRenderer, Text.literal(String.valueOf(number)),
                 x + w / 2, y + 12, 0xFFFFFFFF);
+    }
+
+    private void drawReelTrail(DrawContext context, int x, long elapsed) {
+        if (effectParticleCount(1) == 0) {
+            return;
+        }
+        int offset = (int) ((Math.max(0L, elapsed) / 12L) % (REEL_SIZE - 4));
+        for (int i = 0; i < 4; i++) {
+            int y = REEL_Y + 2 + Math.floorMod(offset - i * 3, REEL_SIZE - 4);
+            int color = ((40 - i * 9) << 24) | (C_GOLD & 0xFFFFFF);
+            context.fill(x + 3, y, x + REEL_SIZE - 3, y + 1, color);
+        }
+    }
+
+    private int effectParticleCount(int fullCount) {
+        return switch (MinecraftClient.getInstance().options.getParticles().getValue()) {
+            case ALL -> fullCount;
+            case DECREASED -> Math.max(1, fullCount / 3);
+            case MINIMAL -> 0;
+        };
     }
 
     private void drawShop(DrawContext context) {
@@ -746,6 +798,9 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         lastPayout = 0L;
         lastStake = bet;
         resultFlashUntil = 0L;
+        slotRevealAt = -1L;
+        lastJackpot = false;
+        slotEffects.clear();
     }
 
     private void spinRoulette() {
@@ -768,9 +823,13 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         roulettePayout = 0L;
         rouletteStake = bet;
         rouletteFlashUntil = 0L;
+        rouletteRevealAt = -1L;
+        rouletteEffects.clear();
     }
 
     private void updateAnimations(long now) {
+        slotEffects.expire(now);
+        rouletteEffects.expire(now);
         if (spinning) {
             if (pendingReels != null) {
                 for (int i = 0; i < 3; i++) {
@@ -786,6 +845,14 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                     shownBalance = pendingBalance;
                     lastPayout = pendingPayout;
                     resultFlashUntil = now + 5000L;
+                    slotRevealAt = now;
+                    lastJackpot = reels[0] == SlotSymbol.SEVEN && reels[1] == SlotSymbol.SEVEN
+                            && reels[2] == SlotSymbol.SEVEN && lastPayout > lastStake;
+                    if (lastPayout > lastStake) {
+                        boolean bigWin = lastStake > 0L && (double) lastPayout / lastStake >= 10.0;
+                        slotEffects.burst(CONTENT_CENTER, REEL_Y + REEL_SIZE - 3,
+                                effectParticleCount(lastJackpot ? 64 : (bigWin ? 48 : 28)), bigWin, now);
+                    }
                     pendingReels = null;
                 }
             } else if (now > spinStart + 3000L) {
@@ -796,6 +863,12 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                 rouletteSpinning = false;
                 shownBalance = rouletteBalance;
                 rouletteFlashUntil = now + 5000L;
+                rouletteRevealAt = now;
+                if (roulettePayout > rouletteStake) {
+                    boolean bigWin = rouletteStake > 0L && (double) roulettePayout / rouletteStake >= 10.0;
+                    rouletteEffects.burst(CONTENT_CENTER, ROULETTE_STRIP_Y + 29,
+                            effectParticleCount(bigWin ? 48 : 24), bigWin, now);
+                }
             }
         } else {
             shownBalance = this.handler.getBalance();

@@ -21,6 +21,7 @@
   "gui.casinocraft.bet": "BET %s",
   "gui.casinocraft.spinning": "Spinning...",
   "gui.casinocraft.win": "WIN: %s",
+  "gui.casinocraft.jackpot": "JACKPOT: %s",
   "gui.casinocraft.lose": "No luck",
   "gui.casinocraft.return_bet": "RETURN: %s",
   "gui.casinocraft.paytable_hint": "3 of a kind: x4 - x60",

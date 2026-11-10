@@ -21,6 +21,7 @@
   "gui.casinocraft.bet": "СТАВКА %s",
   "gui.casinocraft.spinning": "Крутим...",
   "gui.casinocraft.win": "ВЫИГРЫШ: %s",
+  "gui.casinocraft.jackpot": "ДЖЕКПОТ: %s",
   "gui.casinocraft.lose": "Не повезло",
   "gui.casinocraft.return_bet": "Возврат: %s",
   "gui.casinocraft.paytable_hint": "3 в ряд: x4 - x60",

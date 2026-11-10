@@ -20,6 +20,7 @@ CasinoCraft turns the value of ordinary Minecraft items into a casino economy:
 * **Roulette** — European wheel (37 numbers): red/black, even/odd and zero.
 * **Shop** — almost every item in the registry (1118 in vanilla 1.20.1), with search and scrolling.
 * **Chips** — physical money you can withdraw, trade with other players and deposit back 1:1.
+* **Visual effects** — reel motion trails, soft landing/win glows, gold win sparks and a special three-sevens jackpot. The Minecraft Particles setting controls spark density; Minimal also disables trails. Effects are client-only and do not change outcomes.
 
 Everything is server-authoritative: the client only plays animations, it cannot rig results or prices.
 
@@ -193,4 +194,3 @@ The GUI is drawn programmatically — no textures to break with resource packs. 
 MIT — see [LICENSE](LICENSE).
 
 CasinoCraft is a game mod. All currency, chips and bets are virtual and have no real-world value. It does not connect to any online casino, does not process payments and is not intended for real-money gambling.
-
