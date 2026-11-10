@@ -1,6 +1,7 @@
 package com.casinocraft.item;
 
 import com.casinocraft.economy.CasinoEconomy;
+import com.casinocraft.network.ModNetworking;
 import com.casinocraft.screen.CasinoScreenHandler;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
@@ -36,6 +37,7 @@ public class CasinoChipItem extends Item {
             if (serverPlayer.currentScreenHandler instanceof CasinoScreenHandler handler) {
                 long balance = CasinoEconomy.balance(serverPlayer);
                 handler.setBalanceLocal(balance);
+                ModNetworking.sendPrices(serverPlayer);
             }
         }
         return TypedActionResult.success(stack, world.isClient);
@@ -47,3 +49,4 @@ public class CasinoChipItem extends Item {
         tooltip.add(Text.translatable("item.casinocraft.casino_chip.tooltip2").formatted(Formatting.DARK_GRAY));
     }
 }
+

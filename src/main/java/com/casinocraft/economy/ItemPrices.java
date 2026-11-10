@@ -146,6 +146,7 @@ public final class ItemPrices {
     }
 
     public static void load() {
+        invalidateCache();
         configFile = FabricLoader.getInstance().getConfigDir().resolve("casinocraft-prices.json");
         try {
             if (!Files.exists(configFile)) {
@@ -295,12 +296,21 @@ public final class ItemPrices {
         if (stack.isEmpty()) {
             return 0L;
         }
-        long value = price(stack.getItem()) * stack.getCount();
-        if (stack.isDamageable() && stack.getMaxDamage() > 0) {
-            double remaining = 1.0 - (double) stack.getDamage() / stack.getMaxDamage();
-            return Math.round(value * Math.max(0.0, Math.min(1.0, remaining)));
+        return PriceSnapshot.totalPrice(price(stack.getItem()), stack.getCount(),
+                stack.getDamage(), stack.isDamageable() ? stack.getMaxDamage() : 0);
+    }
+
+    public static PriceSnapshot snapshot(World world) {
+        ensureRecipes(world);
+        Map<String, PriceSnapshot.Entry> entries = new LinkedHashMap<>();
+        for (Item item : Registries.ITEM) {
+            long sell = price(item);
+            long shop = isBuyable(item) ? shopPrice(item) : 0L;
+            if (sell > 0L || shop > 0L) {
+                entries.put(Registries.ITEM.getId(item).toString(), new PriceSnapshot.Entry(sell, shop));
+            }
         }
-        return value;
+        return new PriceSnapshot(entries);
     }
 
     private static long resolveSell(Item item) {
@@ -366,9 +376,10 @@ public final class ItemPrices {
 
     /**
      * Строит индекс рецептов и запасные цены. Вызывается на сервере при старте
-     * и на клиенте при открытии интерфейса — обе стороны видят одни и те же рецепты.
+     * и при изменении серверных рецептов. Клиент получает готовый снимок цен.
      */
-    public static synchronized void ensureRecipes(World world) {        if (world == null) {
+    public static synchronized void ensureRecipes(World world) {
+        if (world == null) {
             return;
         }
         RecipeManager manager = world.getRecipeManager();
@@ -376,6 +387,9 @@ public final class ItemPrices {
             return;
         }
         recipeSource = manager;
+        sellReady = false;
+        SAFE_SELL.clear();
+        SELL_CACHE.clear();
         RECIPES.clear();
         COOKING.clear();
         DERIVED.clear();
@@ -699,3 +713,4 @@ public final class ItemPrices {
         }
     }
 }
+

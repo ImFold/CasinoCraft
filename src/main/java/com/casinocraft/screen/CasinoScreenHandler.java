@@ -1,6 +1,7 @@
 package com.casinocraft.screen;
 
 import com.casinocraft.CasinoLayout;
+import com.casinocraft.economy.PriceSnapshot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
@@ -20,6 +21,15 @@ public class CasinoScreenHandler extends ScreenHandler {
 
     private final Inventory deposit = new SimpleInventory(DEPOSIT_SLOTS);
     private final ArrayPropertyDelegate balanceData = new ArrayPropertyDelegate(2);
+    private PriceSnapshot prices = PriceSnapshot.EMPTY;
+
+    public PriceSnapshot getPrices() {
+        return prices;
+    }
+
+    public void setPrices(PriceSnapshot prices) {
+        this.prices = prices;
+    }
 
     public CasinoScreenHandler(int syncId, PlayerInventory playerInventory) {
         super(ModScreenHandlers.CASINO, syncId);
@@ -103,3 +113,4 @@ public class CasinoScreenHandler extends ScreenHandler {
         }
     }
 }
+

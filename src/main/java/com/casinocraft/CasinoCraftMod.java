@@ -30,8 +30,14 @@ public class CasinoCraftMod implements ModInitializer {
             ItemPrices.invalidateCache();
             ItemPrices.ensureRecipes(server.getOverworld());
         });
-        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> ItemPrices.invalidateCache());
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
+            if (success) {
+                ItemPrices.invalidateCache();
+                ModNetworking.refreshPrices(server);
+            }
+        });
 
         LOGGER.info("CasinoCraft loaded: касса, слоты и рулетка на месте.");
     }
 }
+

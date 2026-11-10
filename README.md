@@ -20,6 +20,7 @@ CasinoCraft turns the value of ordinary Minecraft items into a casino economy:
 * **Roulette** — European wheel (37 numbers): red/black, even/odd and zero.
 * **Shop** — almost every item in the registry (1118 in vanilla 1.20.1), with search and scrolling.
 * **Chips** — physical money you can withdraw, trade with other players and deposit back 1:1.
+* **Visual effects** — reel motion trails, soft landing/win glows, gold win sparks and a special three-sevens jackpot. The Minecraft Particles setting controls spark density; Minimal also disables trails. Effects are client-only and do not change outcomes.
 
 Everything is server-authoritative: the client only plays animations, it cannot rig results or prices.
 
@@ -28,7 +29,7 @@ Everything is server-authoritative: the client only plays animations, it cannot 
 | | |
 |---|---|
 | **Cashier** | 6 deposit slots, live "to sell" preview, sells nearly everything (ores, gear, loot) |
-| **Slots** | Server RNG, 0.9 s cooldown, theoretical house edge ≈ 8.5% |
+| **Slots** | Server RNG, 0.9 s cooldown, theoretical house edge ≈ 15.41% |
 | **Roulette** | European wheel, 2x on red/black/even/odd, 36x on zero, house edge ≈ 2.7% |
 | **Shop** | 1118 buyable items, search by name/ID, mouse-wheel scroll, `LMB` = 1, `Shift+LMB` = 64 |
 | **Chips** | "Chip 100" / "Chip 10" items, fixed face value, 1:1 deposit/withdraw |
@@ -109,6 +110,8 @@ The mod is built to survive players who like spreadsheets:
 * **Withdraw limit.** 38 400 per click (6 stacks) to avoid dumping thousands of item entities.
 * **Durability matters.** A used sword is worth less than a new one.
 
+Slots have a theoretical return of **84.5946%** (house edge **15.4054%**), including stake returns for pairs. These are long-run averages, not a guaranteed result for a session.
+
 ## Configuration
 
 `config/casinocraft-prices.json` is generated on first launch:
@@ -130,7 +133,10 @@ The mod is built to survive players who like spreadsheets:
 * `sell` — what the cashier pays. Keys starting with `#` are item tags.
 * `shop` — explicit shop prices (everything else is derived).
 * Values are per **single item**; stack size is applied automatically.
-* After editing run `/casino reload` or restart.
+* After editing run `/casino reload` or restart. Open casino screens receive the updated server prices automatically.
+* Clients display server prices; their local price config does not affect the shop or cashier preview.
+* If a price changes during a purchase, the server cancels it without charging and refreshes the prices.
+* Install this update on both server and clients: the purchase packet now includes the displayed price.
 
 A legacy flat config (`{"minecraft:diamond": 120}`) is still read as `sell`.
 

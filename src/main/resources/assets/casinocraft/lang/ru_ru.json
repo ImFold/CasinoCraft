@@ -21,6 +21,7 @@
   "gui.casinocraft.bet": "СТАВКА %s",
   "gui.casinocraft.spinning": "Крутим...",
   "gui.casinocraft.win": "ВЫИГРЫШ: %s",
+  "gui.casinocraft.jackpot": "ДЖЕКПОТ: %s",
   "gui.casinocraft.lose": "Не повезло",
   "gui.casinocraft.return_bet": "Возврат: %s",
   "gui.casinocraft.paytable_hint": "3 в ряд: x4 - x60",
@@ -39,6 +40,7 @@
   "gui.casinocraft.shop.empty": "Магазин пуст",
   "gui.casinocraft.shop.not_found": "Ничего не найдено",
 
+  "message.casinocraft.prices_changed": "Цены изменились. Повторите покупку.",
   "message.casinocraft.not_enough": "Недостаточно средств",
   "message.casinocraft.bet_too_small": "Минимальная ставка: %s",
   "message.casinocraft.bet_too_big": "Максимальная ставка: %s",
@@ -60,3 +62,4 @@
   "command.casinocraft.set": "Установлен баланс %s игрокам: %s",
   "command.casinocraft.reload": "Цены предметов перезагружены"
 }
+
