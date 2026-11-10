@@ -51,7 +51,7 @@ Everything is server-authoritative: the client only plays animations, it cannot 
 
 1. Install **Fabric Loader 0.16.10+** for **Minecraft 1.20.1**.
 2. Put these files into `.minecraft/mods`:
-   * `casinocraft-1.5.1.jar`
+   * `casinocraft-1.6.0.jar`
    * [Fabric API 0.92.x for 1.20.1](https://modrinth.com/mod/fabric-api)
 3. Launch the game.
 
@@ -159,7 +159,7 @@ Requirements: **JDK 17** (Gradle wrapper included).
 ./gradlew build
 ```
 
-The jar appears in `build/libs/casinocraft-1.5.1.jar`.
+The jar appears in `build/libs/casinocraft-1.6.0.jar`.
 
 Dev client with a test world:
 

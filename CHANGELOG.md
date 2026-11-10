@@ -2,11 +2,12 @@
 
 All notable changes to CasinoCraft.
 
-## Unreleased
+## 1.6.0
 
 * Added client-side reel trails, landing/win glows, bounded gold spark bursts and a three-sevens jackpot effect. Respects the Minecraft particle setting.
 
 * Shop prices, catalogue and cashier previews now use per-screen server price snapshots.
+* The snapshot is cached and rebuilt only on reload, so opening the casino does not rescan the registry.
 * Price and data-pack reloads rebuild the price cache and refresh open casino screens.
 * Purchases with an outdated displayed price are rejected without charging.
 * Corrected the documented slot return to 84.5946% (house edge 15.4054%); payouts are unchanged.

@@ -61,6 +61,8 @@ public final class ItemPrices {
     /** Цены скупки после защиты от крафт-арбитража. */
     private static final Map<Item, Long> SAFE_SELL = new HashMap<>();
     private static boolean sellReady;
+    /** Готовый снапшот цен для открытых окон казино; сбрасывается при перезагрузке. */
+    private static volatile PriceSnapshot snapshotCache;
 
     /** Кэш цен, посчитанных по рецептам. */
     private static final Map<Item, Double> DERIVED = new HashMap<>();
@@ -172,6 +174,7 @@ public final class ItemPrices {
         RECIPES.clear();
         SAFE_SELL.clear();
         sellReady = false;
+        snapshotCache = null;
         recipeSource = null;
     }
 
@@ -301,6 +304,10 @@ public final class ItemPrices {
     }
 
     public static PriceSnapshot snapshot(World world) {
+        PriceSnapshot cached = snapshotCache;
+        if (cached != null) {
+            return cached;
+        }
         ensureRecipes(world);
         Map<String, PriceSnapshot.Entry> entries = new LinkedHashMap<>();
         for (Item item : Registries.ITEM) {
@@ -310,7 +317,9 @@ public final class ItemPrices {
                 entries.put(Registries.ITEM.getId(item).toString(), new PriceSnapshot.Entry(sell, shop));
             }
         }
-        return new PriceSnapshot(entries);
+        PriceSnapshot result = new PriceSnapshot(entries);
+        snapshotCache = result;
+        return result;
     }
 
     private static long resolveSell(Item item) {
@@ -390,6 +399,7 @@ public final class ItemPrices {
         sellReady = false;
         SAFE_SELL.clear();
         SELL_CACHE.clear();
+        snapshotCache = null;
         RECIPES.clear();
         COOKING.clear();
         DERIVED.clear();

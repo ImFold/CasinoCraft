@@ -51,7 +51,7 @@ CasinoCraft превращает ценность обычных предмет�
 
 1. Установите **Fabric Loader 0.16.10+** для **Minecraft 1.20.1**.
 2. Положите в `.minecraft/mods`:
-   * `casinocraft-1.5.1.jar`
+   * `casinocraft-1.6.0.jar`
    * [Fabric API 0.92.x для 1.20.1](https://modrinth.com/mod/fabric-api)
 3. Запустите игру.
 
@@ -157,7 +157,7 @@ CasinoCraft превращает ценность обычных предмет�
 ./gradlew build
 ```
 
-Готовый jar: `build/libs/casinocraft-1.5.1.jar`.
+Готовый jar: `build/libs/casinocraft-1.6.0.jar`.
 
 Dev-клиент:
 
