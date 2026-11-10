@@ -2,16 +2,15 @@
 
 All notable changes to CasinoCraft.
 
-## Unreleased
+## 1.6.0 (unreleased)
 
-* Added client-side reel trails, landing/win glows, bounded gold spark bursts and a three-sevens jackpot effect. Respects the Minecraft particle setting.
-
-* Shop prices, catalogue and cashier previews now use per-screen server price snapshots.
-* Price and data-pack reloads rebuild the price cache and refresh open casino screens.
-* Purchases with an outdated displayed price are rejected without charging.
-* Corrected the documented slot return to 84.5946% (house edge 15.4054%); payouts are unchanged.
-* Added regression tests for slot returns, price snapshots and packet serialization.
-* Requires updating both server and clients because the purchase packet format changed.
+* Replaced three-symbol slots with a 5×3 video slot, five fixed lines and Wild substitution. One total stake is split equally across lines; only the best left-to-right award is paid per line.
+* Added smooth staggered reel stops, an in-game paytable, cycling winning-line highlights and a five-sevens line jackpot (Wilds allowed).
+* New paytable has a theoretical return of 96.1830768%, verified by exhaustive weighted line enumeration. Pairs no longer pay.
+* Added client-side reel trails, bounded win sparks and landing/win glows respecting the Minecraft particle setting.
+* Shop prices, catalogue and cashier previews use per-screen server price snapshots. Price/datapack reloads refresh open screens; outdated quoted purchases are rejected without charging.
+* Added regression tests for payouts, Wild rules, pricing, packet serialization, VFX bounds and reel easing.
+* Requires updating both server and clients: the purchase and slot-result packet formats changed.
 
 ## 1.5.1
 
