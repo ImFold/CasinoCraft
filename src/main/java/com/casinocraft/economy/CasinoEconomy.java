@@ -7,6 +7,7 @@ import com.casinocraft.game.RouletteBet;
 import com.casinocraft.game.SlotMachine;
 import com.casinocraft.game.SlotSymbol;
 import com.casinocraft.network.ModNetworking;
+import com.casinocraft.network.SlotResultPacket;
 import com.casinocraft.screen.CasinoScreenHandler;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -163,20 +164,22 @@ public final class CasinoEconomy {
 
     // ------------------------------------------------------------------ слоты
     public static void spinSlots(ServerPlayerEntity player, int bet) {
+        if (!(player.currentScreenHandler instanceof CasinoScreenHandler handler)) {
+            return;
+        }
+        if (bet % SlotMachine.LINE_COUNT != 0) {
+            sendNotice(player, "message.casinocraft.invalid_slot_bet", SlotMachine.LINE_COUNT);
+            return;
+        }
         if (!beginSpin(player, bet)) {
             return;
         }
         SlotSymbol[] reels = SlotMachine.spin(player.getRandom());
-        long payout = SlotMachine.payout(reels[0], reels[1], reels[2], bet);
+        long payout = SlotMachine.payout(reels, bet);
         long newBalance = settle(player, bet, payout);
 
         PacketByteBuf buf = PacketByteBufs.create();
-        for (SlotSymbol symbol : reels) {
-            buf.writeVarInt(symbol.ordinal());
-        }
-        buf.writeLong(payout);
-        buf.writeLong(bet);
-        buf.writeLong(newBalance);
+        new SlotResultPacket(handler.syncId, reels, payout, bet, newBalance).write(buf);
         ServerPlayNetworking.send(player, ModNetworking.SLOTS_RESULT, buf);
     }
 

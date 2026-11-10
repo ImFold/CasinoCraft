@@ -2,55 +2,101 @@ package com.casinocraft.game;
 
 import net.minecraft.util.math.random.Random;
 
-/**
- * Логика слотов и таблица выплат.
- * <p>
- * Три одинаковых символа платят bet * tripleMultiplier, два одинаковых возвращают ставку.
- * Математическое ожидание при текущих весах = 0.845946 от ставки
- * (теоретический возврат 84.5946%, перевес казино 15.4054%).
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/** 5 x 3 independent weighted cells, five fixed lines, left-to-right Wild substitution.
+ * Exact theoretical return: 96.1830768%, with a total stake divisible by five.
  */
 public final class SlotMachine {
+    public static final int REELS = 5;
+    public static final int ROWS = 3;
+    public static final int CELL_COUNT = REELS * ROWS;
+    public static final int LINE_COUNT = 5;
+    private static final int[][] LINES = {
+            {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0}, {2, 2, 2, 2, 2},
+            {0, 1, 2, 1, 0}, {2, 1, 0, 1, 2}
+    };
     private static final SlotSymbol[] SYMBOLS = SlotSymbol.values();
-    private static final int TOTAL_WEIGHT;
+    private static final int TOTAL_WEIGHT = java.util.Arrays.stream(SYMBOLS).mapToInt(s -> s.weight).sum();
 
-    static {
-        int total = 0;
-        for (SlotSymbol symbol : SYMBOLS) {
-            total += symbol.weight;
-        }
-        TOTAL_WEIGHT = total;
-    }
+    public record LineWin(int line, SlotSymbol symbol, int matches, int multiplier) { }
 
-    private SlotMachine() {
+    private SlotMachine() { }
+
+    public static int rowOnLine(int line, int reel) {
+        return LINES[line][reel];
     }
 
     public static SlotSymbol[] spin(Random random) {
-        SlotSymbol[] result = new SlotSymbol[3];
-        for (int i = 0; i < 3; i++) {
-            result[i] = pick(random);
+        SlotSymbol[] result = new SlotSymbol[CELL_COUNT];
+        for (int i = 0; i < result.length; i++) {
+            int roll = random.nextInt(TOTAL_WEIGHT);
+            for (SlotSymbol symbol : SYMBOLS) {
+                roll -= symbol.weight;
+                if (roll < 0) {
+                    result[i] = symbol;
+                    break;
+                }
+            }
         }
         return result;
     }
 
-    private static SlotSymbol pick(Random random) {
-        int roll = random.nextInt(TOTAL_WEIGHT);
-        for (SlotSymbol symbol : SYMBOLS) {
-            roll -= symbol.weight;
-            if (roll < 0) {
-                return symbol;
+    /** One best award per line, even when leading Wilds allow several interpretations. */
+    public static LineWin evaluateLine(SlotSymbol[] symbols, int line) {
+        validate(symbols, REELS);
+        LineWin best = new LineWin(line, SlotSymbol.CHERRY, 0, 0);
+        for (SlotSymbol target : SYMBOLS) {
+            if (target == SlotSymbol.WILD) {
+                continue;
+            }
+            int matches = 0;
+            while (matches < REELS && (symbols[matches] == target || symbols[matches] == SlotSymbol.WILD)) {
+                matches++;
+            }
+            int multiplier = target.multiplier(matches);
+            if (multiplier > best.multiplier()) {
+                best = new LineWin(line, target, matches, multiplier);
             }
         }
-        return SYMBOLS[0];
+        return best;
     }
 
-    public static long payout(SlotSymbol a, SlotSymbol b, SlotSymbol c, long bet) {
-        if (a == b && b == c) {
-            return bet * a.tripleMultiplier;
+    public static List<LineWin> winningLines(SlotSymbol[] grid) {
+        validate(grid, CELL_COUNT);
+        List<LineWin> wins = new ArrayList<>();
+        for (int line = 0; line < LINE_COUNT; line++) {
+            SlotSymbol[] symbols = new SlotSymbol[REELS];
+            for (int reel = 0; reel < REELS; reel++) {
+                symbols[reel] = grid[reel * ROWS + LINES[line][reel]];
+            }
+            LineWin win = evaluateLine(symbols, line);
+            if (win.multiplier() > 0) {
+                wins.add(win);
+            }
         }
-        if (a == b || b == c || a == c) {
-            return bet;
+        return List.copyOf(wins);
+    }
+
+    public static long payout(SlotSymbol[] grid, long totalStake) {
+        if (totalStake <= 0L || totalStake % LINE_COUNT != 0L) {
+            throw new IllegalArgumentException("Total slot stake must be positive and divisible by five");
         }
-        return 0L;
+        long total = 0L;
+        for (LineWin win : winningLines(grid)) {
+            total = Math.addExact(total, Math.multiplyExact(totalStake / LINE_COUNT, win.multiplier()));
+        }
+        return total;
+    }
+
+    private static void validate(SlotSymbol[] symbols, int length) {
+        if (symbols == null || symbols.length != length) {
+            throw new IllegalArgumentException("Unexpected slot grid size");
+        }
+        for (SlotSymbol symbol : symbols) {
+            Objects.requireNonNull(symbol, "Missing slot symbol");
+        }
     }
 }
-

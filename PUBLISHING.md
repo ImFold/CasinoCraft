@@ -1,7 +1,7 @@
 # Публикация CasinoCraft на Modrinth и CurseForge
 
 Готовые поля и тексты. Всё, что нужно, уже лежит в репозитории:
-`build/libs/casinocraft-1.6.0.jar`, `docs/screenshots/*.png`, `src/main/resources/assets/casinocraft/icon.png`, `README.md`, `README.ru.md`.
+`build/libs/casinocraft-1.7.0.jar`, `docs/screenshots/*.png`, `src/main/resources/assets/casinocraft/icon.png`, `README.md`, `README.ru.md`.
 
 ---
 
@@ -27,13 +27,13 @@
 3. **Description** — вставь содержимое `README.md` (Markdown поддерживается). Русскую версию можно добавить в конец или отдельным блоком со ссылкой на `README.ru.md`.
 4. **Gallery** — загрузи 4 скриншота из `docs/screenshots/` (main, roulette, shop, withdraw), иконку — из `src/main/resources/assets/casinocraft/icon.png`.
 5. **Versions → Create version**:
-   - Version number: `1.6.0`
+   - Version number: `1.7.0`
    - Channel: `Release`
    - Loaders: `Fabric`
    - Game versions: `1.20.1`
-   - File: `build/libs/casinocraft-1.6.0.jar`
+   - File: `build/libs/casinocraft-1.7.0.jar`
    - Dependencies: `Fabric API` (обязательная)
-   - Changelog — скопируй раздел `1.6.0` из `CHANGELOG.md`.
+   - Changelog — скопируй раздел `1.7.0` из `CHANGELOG.md`.
 
 ---
 
@@ -53,8 +53,8 @@
 
 3. **Description** — вставь `README.md` (CurseForge понимает Markdown). Русскую версию — в конец или отдельным файлом в галерее.
 4. **Files → Upload File**:
-   - File: `build/libs/casinocraft-1.6.0.jar`
-   - Display name: `CasinoCraft 1.6.0`
+   - File: `build/libs/casinocraft-1.7.0.jar`
+   - Display name: `CasinoCraft 1.7.0`
    - Release type: `Release`
    - Game version: `1.20.1`, Mod loader: `Fabric`
    - Changelog — из `CHANGELOG.md`.
@@ -74,3 +74,4 @@
 ## Важно
 
 Обе площадки требуют аккаунт с подтверждённой почтой. Пароль, 2FA и токены никому не передавай, включая меня: загрузку нужно сделать самому через браузер.
+

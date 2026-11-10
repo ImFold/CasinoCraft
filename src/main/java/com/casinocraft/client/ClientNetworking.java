@@ -2,6 +2,7 @@ package com.casinocraft.client;
 
 import com.casinocraft.network.ModNetworking;
 import com.casinocraft.economy.PriceSnapshot;
+import com.casinocraft.network.SlotResultPacket;
 import com.casinocraft.screen.CasinoScreenHandler;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
@@ -23,16 +24,12 @@ public final class ClientNetworking {
             });
         });
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SLOTS_RESULT, (client, handler, buf, sender) -> {
-            int a = buf.readVarInt();
-            int b = buf.readVarInt();
-            int c = buf.readVarInt();
-            long payout = buf.readLong();
-            long stake = buf.readLong();
-            long newBalance = buf.readLong();
+            SlotResultPacket result = SlotResultPacket.read(buf);
             client.execute(() -> {
                 CasinoScreen screen = CasinoScreen.current();
-                if (screen != null) {
-                    screen.onSlotsResult(a, b, c, payout, stake, newBalance);
+                if (screen != null && client.player != null
+                        && client.player.currentScreenHandler.syncId == result.syncId()) {
+                    screen.onSlotsResult(result.grid(), result.payout(), result.stake(), result.balance());
                 }
             });
         });

@@ -24,7 +24,7 @@
   "gui.casinocraft.jackpot": "ДЖЕКПОТ: %s",
   "gui.casinocraft.lose": "Не повезло",
   "gui.casinocraft.return_bet": "Возврат: %s",
-  "gui.casinocraft.paytable_hint": "3 в ряд: x4 - x60",
+  "gui.casinocraft.paytable_hint": "5 линий | 3+ слева направо",
   "gui.casinocraft.spin_bet": "КРУТИТЬ (%s)",
   "gui.casinocraft.roulette.red": "КРАСН",
   "gui.casinocraft.roulette.black": "ЧЁРН",
@@ -60,6 +60,10 @@
   "command.casinocraft.top_line": "%s. %s — %s",
   "command.casinocraft.give": "Начислено %s игрокам по %s",
   "command.casinocraft.set": "Установлен баланс %s игрокам: %s",
-  "command.casinocraft.reload": "Цены предметов перезагружены"
+  "command.casinocraft.reload": "Цены предметов перезагружены",
+  "gui.casinocraft.paytable_title": "Выплата x ставка линии",
+  "gui.casinocraft.line_stake": "Линия: %s | W = любой",
+  "gui.casinocraft.slot_payout": "ВЫПЛАТА: %s",
+  "gui.casinocraft.total_bet": "ВСЕГО %s",
+  "message.casinocraft.invalid_slot_bet": "Ставка слотов должна быть кратна %s"
 }
-

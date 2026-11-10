@@ -24,7 +24,7 @@
   "gui.casinocraft.jackpot": "JACKPOT: %s",
   "gui.casinocraft.lose": "No luck",
   "gui.casinocraft.return_bet": "RETURN: %s",
-  "gui.casinocraft.paytable_hint": "3 of a kind: x4 - x60",
+  "gui.casinocraft.paytable_hint": "5 lines | 3+ left to right",
   "gui.casinocraft.spin_bet": "SPIN (%s)",
   "gui.casinocraft.roulette.red": "RED",
   "gui.casinocraft.roulette.black": "BLACK",
@@ -60,6 +60,10 @@
   "command.casinocraft.top_line": "%s. %s - %s",
   "command.casinocraft.give": "Gave %s players %s",
   "command.casinocraft.set": "Set balance for %s players: %s",
-  "command.casinocraft.reload": "Item prices reloaded"
+  "command.casinocraft.reload": "Item prices reloaded",
+  "gui.casinocraft.paytable_title": "Payout x line stake",
+  "gui.casinocraft.line_stake": "Line: %s | W = any symbol",
+  "gui.casinocraft.slot_payout": "PAYOUT: %s",
+  "gui.casinocraft.total_bet": "TOTAL %s",
+  "message.casinocraft.invalid_slot_bet": "Slot stake must be a multiple of %s"
 }
-

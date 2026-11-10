@@ -16,11 +16,11 @@
 CasinoCraft turns the value of ordinary Minecraft items into a casino economy:
 
 * **Cashier** — deposit ores, blocks, food, mob drops, tools and armor; the mod prices them and pays coins.
-* **Slots** — three reels, six symbols, bets from 10 to 50 000, payouts x4–x60.
+* **Slots** — 5×3 field, five fixed paylines, Wild substitution, total stakes from 10 to 50 000.
 * **Roulette** — European wheel (37 numbers): red/black, even/odd and zero.
 * **Shop** — almost every item in the registry (1118 in vanilla 1.20.1), with search and scrolling.
 * **Chips** — physical money you can withdraw, trade with other players and deposit back 1:1.
-* **Visual effects** — reel motion trails, soft landing/win glows, gold win sparks and a special three-sevens jackpot. The Minecraft Particles setting controls spark density; Minimal also disables trails. Effects are client-only and do not change outcomes.
+* **Visual effects** — reel motion trails, soft landing/win glows, gold win sparks and a special five-sevens line jackpot (Wilds allowed). The Minecraft Particles setting controls spark density; Minimal also disables trails. Effects are client-only and do not change outcomes.
 
 Everything is server-authoritative: the client only plays animations, it cannot rig results or prices.
 
@@ -29,7 +29,7 @@ Everything is server-authoritative: the client only plays animations, it cannot 
 | | |
 |---|---|
 | **Cashier** | 6 deposit slots, live "to sell" preview, sells nearly everything (ores, gear, loot) |
-| **Slots** | Server RNG, 0.9 s cooldown, theoretical house edge ≈ 15.41% |
+| **Slots** | Server RNG, 0.9 s cooldown, 5×3, 5 lines, Wild, theoretical return ≈ 96.18% |
 | **Roulette** | European wheel, 2x on red/black/even/odd, 36x on zero, house edge ≈ 2.7% |
 | **Shop** | 1118 buyable items, search by name/ID, mouse-wheel scroll, `LMB` = 1, `Shift+LMB` = 64 |
 | **Chips** | "Chip 100" / "Chip 10" items, fixed face value, 1:1 deposit/withdraw |
@@ -38,6 +38,8 @@ Everything is server-authoritative: the client only plays animations, it cannot 
 | **Config** | `config/casinocraft-prices.json`, editable live with `/casino reload` |
 
 ## Screenshots
+
+The images below show the earlier 1.5 interface; version 1.7 replaces the slot panel with the 5×3 field.
 
 | Slots | Roulette |
 |---|---|
@@ -51,7 +53,7 @@ Everything is server-authoritative: the client only plays animations, it cannot 
 
 1. Install **Fabric Loader 0.16.10+** for **Minecraft 1.20.1**.
 2. Put these files into `.minecraft/mods`:
-   * `casinocraft-1.6.0.jar`
+   * `casinocraft-1.7.0.jar`
    * [Fabric API 0.92.x for 1.20.1](https://modrinth.com/mod/fabric-api)
 3. Launch the game.
 
@@ -110,7 +112,25 @@ The mod is built to survive players who like spreadsheets:
 * **Withdraw limit.** 38 400 per click (6 stacks) to avoid dumping thousands of item entities.
 * **Durability matters.** A used sword is worth less than a new one.
 
-Slots have a theoretical return of **84.5946%** (house edge **15.4054%**), including stake returns for pairs. These are long-run averages, not a guaranteed result for a session.
+### Video slot rules
+
+* The displayed stake is the **total spin cost**, divided equally over all five lines; no extra charge per line. Stakes must be divisible by 5.
+* Lines are the top, middle and bottom rows, plus V and inverted V. Matches start on the leftmost reel and must be consecutive: 3, 4 or 5 symbols.
+* **W (Wild)** substitutes for every regular symbol. Each line pays only its highest available award; leading Wilds and an all-Wild line use the most valuable interpretation.
+* The `?` button opens the paytable. Multipliers apply to the **line stake**, not the total stake. Winning line payouts are added together; the displayed payout is the gross amount credited, not net profit.
+* Example: a total stake of 100 means 20 per line. Three cherries on one line pay `20 × 6 = 120`.
+
+| Symbol | 3 | 4 | 5 |
+|---|---:|---:|---:|
+| Cherry (*) | 6× | 20× | 50× |
+| Lemon (%) | 8× | 25× | 80× |
+| Dollar ($) | 10× | 35× | 110× |
+| Bell (@) | 15× | 50× | 160× |
+| Diamond (#) | 30× | 110× | 400× |
+| Seven (7) | 60× | 250× | 1500× |
+
+All 15 cells are drawn independently on the server. Symbol weights are 28/24/18/15/8/5/2 for the symbols above followed by Wild. Exact weighted enumeration of all 16,807 possible five-symbol lines gives **96.1830768% theoretical return** (house edge **3.8169232%**). Shared cells correlate line wins, but do not change their combined expected return. These are long-run averages, not a session guarantee. Pairs do not pay.
+
 
 ## Configuration
 
@@ -136,7 +156,7 @@ Slots have a theoretical return of **84.5946%** (house edge **15.4054%**), inclu
 * After editing run `/casino reload` or restart. Open casino screens receive the updated server prices automatically.
 * Clients display server prices; their local price config does not affect the shop or cashier preview.
 * If a price changes during a purchase, the server cancels it without charging and refreshes the prices.
-* Install this update on both server and clients: the purchase packet now includes the displayed price.
+* Install this update on both server and clients: the purchase packet includes the displayed price, and slot results contain a 15-cell grid.
 
 A legacy flat config (`{"minecraft:diamond": 120}`) is still read as `sell`.
 
@@ -159,7 +179,7 @@ Requirements: **JDK 17** (Gradle wrapper included).
 ./gradlew build
 ```
 
-The jar appears in `build/libs/casinocraft-1.6.0.jar`.
+The jar appears in `build/libs/casinocraft-1.7.0.jar`.
 
 Dev client with a test world:
 
