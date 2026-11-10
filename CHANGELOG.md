@@ -2,7 +2,7 @@
 
 All notable changes to CasinoCraft.
 
-## 1.7.0 (unreleased)
+## 1.7.0
 
 * Added BIG/MEGA/EPIC win celebrations at 10×/25×/100× total stake: bounded coin showers, soft glow, payout count-up and separately labeled net profit. Click finishes the counter; Esc, tabs, paytable and new spins dismiss it. Works for slots and roulette.
 
