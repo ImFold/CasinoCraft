@@ -12,6 +12,7 @@ All notable changes to CasinoCraft.
 * Casino-style cabinet: gold frame with animated bulbs, LED bet/win displays, larger symbol tiles, a red gradient spin button, and click, reel-stop and win sounds. Bulbs chase while spinning and flash on wins.
 * The paytable is a proper modal and no longer overlaps reels, bet or hint text; big-win overlays no longer leak the underlying game text. Reels were enlarged to fill the cabinet.
 * The window title is localized now: English clients show "Casino" instead of the hard-coded Russian label.
+* The roulette strip scrolls continuously and brakes smoothly into the winning number instead of jumping one cell at a time; a short tick marks the stop.
 * Slot results carry all 15 cells and the originating screen ID. Requires updating both server and clients.
 * Added regression tests for Wild rules, diagonal lines, total-stake accounting, maximum payouts, result packets and reel easing.
 

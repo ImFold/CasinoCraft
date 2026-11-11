@@ -98,7 +98,11 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     private static final int ROULETTE_STRIP_Y = 68;
     private static final int ROULETTE_CELL_W = 33;
     private static final int ROULETTE_CELL_STEP = 34;
+    private static final int ROULETTE_CELL_H = 32;
     private static final int ROULETTE_BETS_Y = 102;
+    private static final double ROULETTE_STEP_MS = 55.0;
+    private static final long ROULETTE_DECEL_MS = 700L;
+    private static final int ROULETTE_MIN_DISTANCE = 16;
 
     private static final int SHOP_X = 156;
     private static final int SHOP_Y = 52;
@@ -154,6 +158,11 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     private boolean rouletteSpinning;
     private long rouletteStart;
     private int rouletteTarget = -1;
+    private long rouletteMotionStart;
+    private long rouletteStopAt;
+    private long rouletteDecelMs = ROULETTE_DECEL_MS;
+    private double rouletteStartPosition;
+    private double rouletteEndPosition;
     private long roulettePayout;
     private long rouletteStake;
     private long rouletteBalance;
@@ -552,28 +561,33 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
 
     private void drawRoulette(DrawContext context, long now, long bet) {
         boolean overlay = bigWin.active(now) && tab == bigWinTab;
-        int center;
-        if (rouletteSpinning) {
-            center = (int) (((now - rouletteStart) / 55L) % 37L);
-            if (center < 0) {
-                center = 0;
-            }
-        } else {
-            center = Math.max(0, rouletteTarget);
-        }
 
         if (!overlay) {
-            for (int k = -2; k <= 2; k++) {
-                int number = Math.floorMod(center + k, 37);
-                drawNumberCell(context, 158 + (k + 2) * ROULETTE_CELL_STEP, ROULETTE_STRIP_Y,
-                        ROULETTE_CELL_W, 32, number, k == 0);
+            double position = rouletteSpinning
+                    ? roulettePosition(now)
+                    : Math.max(0, rouletteTarget);
+            int base = (int) Math.floor(position);
+            int shift = (int) Math.round((position - base) * ROULETTE_CELL_STEP);
+
+            context.enableScissor(this.x + 157, this.y + ROULETTE_STRIP_Y,
+                    this.x + 157 + 5 * ROULETTE_CELL_STEP,
+                    this.y + ROULETTE_STRIP_Y + ROULETTE_CELL_H);
+            try {
+                for (int k = -2; k <= 3; k++) {
+                    int number = Math.floorMod(base + k, 37);
+                    drawNumberCell(context, 158 + (k + 2) * ROULETTE_CELL_STEP - shift,
+                            ROULETTE_STRIP_Y, ROULETTE_CELL_W, ROULETTE_CELL_H, number, false);
+                }
+            } finally {
+                context.disableScissor();
             }
+            drawRouletteMarker(context);
 
             float landing = !rouletteSpinning
                     ? CasinoVfx.envelope(now, rouletteRevealAt, roulettePayout > rouletteStake ? 1700 : 450)
                     : 0.0f;
             CasinoVfx.glow(context::fill, 158 + 2 * ROULETTE_CELL_STEP, ROULETTE_STRIP_Y,
-                    ROULETTE_CELL_W, 32, roulettePayout > rouletteStake ? C_GOLD : C_DIM, landing);
+                    ROULETTE_CELL_W, ROULETTE_CELL_H, roulettePayout > rouletteStake ? C_GOLD : C_DIM, landing);
             if (effectParticleCount(1) > 0) {
                 rouletteEffects.render(context::fill, now, 155, 64, 333, 100);
             }
@@ -612,6 +626,31 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         drawButton(context, SPIN_X, SPIN_Y, SPIN_W, SPIN_H,
                 Text.translatable("gui.casinocraft.spin_bet", Money.format(bet)),
                 false, !rouletteSpinning && !spinning && bet <= shownBalance, C_BTN);
+    }
+
+    /** Centre position of the strip in cells; the fraction is the pixel offset while scrolling. */
+    private double roulettePosition(long now) {
+        if (rouletteTarget < 0) {
+            return RouletteMotion.free(now, rouletteStart, ROULETTE_STEP_MS);
+        }
+        return RouletteMotion.position(now, rouletteMotionStart, rouletteDecelMs,
+                rouletteCellSpeed(), rouletteStartPosition, rouletteEndPosition);
+    }
+
+    private static double rouletteCellSpeed() {
+        return 1.0 / ROULETTE_STEP_MS;
+    }
+
+    /** Fixed gold frame marking the winning window; cells scroll underneath it. */
+    private void drawRouletteMarker(DrawContext context) {
+        int x = 158 + 2 * ROULETTE_CELL_STEP;
+        int y = ROULETTE_STRIP_Y;
+        int right = x + ROULETTE_CELL_W;
+        int bottom = y + ROULETTE_CELL_H;
+        context.fill(x, y, right, y + 1, C_GOLD);
+        context.fill(x, bottom - 1, right, bottom, C_GOLD);
+        context.fill(x, y, x + 1, bottom, C_GOLD);
+        context.fill(right - 1, y, right, bottom, C_GOLD);
     }
 
     private void drawNumberCell(DrawContext context, int x, int y, int w, int h, int number, boolean highlighted) {
@@ -1107,6 +1146,11 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         rouletteSpinning = true;
         rouletteStart = Util.getMeasuringTimeMs();
         rouletteTarget = -1;
+        rouletteMotionStart = rouletteStart;
+        rouletteStopAt = 0L;
+        rouletteDecelMs = ROULETTE_DECEL_MS;
+        rouletteStartPosition = 0.0;
+        rouletteEndPosition = 0.0;
         roulettePayout = 0L;
         rouletteStake = bet;
         rouletteFlashUntil = 0L;
@@ -1152,11 +1196,12 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                 }
             }
         } else if (rouletteSpinning) {
-            if (rouletteTarget >= 0 && now >= rouletteStart + 1400L) {
+            if (rouletteTarget >= 0 && now >= rouletteStopAt) {
                 rouletteSpinning = false;
                 shownBalance = rouletteBalance;
                 rouletteFlashUntil = now + 5000L;
                 rouletteRevealAt = now;
+                playSound(SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(), 0.3f, 1.5f);
                 boolean largeWin = startBigWin(Tab.ROULETTE, now, roulettePayout, rouletteStake, false);
                 if (roulettePayout > rouletteStake && !largeWin) {
                     boolean bigWin = rouletteStake > 0L && (double) roulettePayout / rouletteStake >= 10.0;
@@ -1189,7 +1234,21 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     }
 
     public void onRouletteResult(int number, long payout, long stake, long newBalance) {
+        long now = Util.getMeasuringTimeMs();
+        double speed = rouletteCellSpeed();
+        double current = RouletteMotion.free(now, rouletteStart, ROULETTE_STEP_MS);
+        double landing = RouletteMotion.landingTarget(current, number, 37, ROULETTE_MIN_DISTANCE);
+        long decel = ROULETTE_DECEL_MS;
+        double brakingDistance = speed * decel / 2.0;
+        if (landing - current < brakingDistance) {
+            decel = Math.max(140L, Math.round(2.0 * (landing - current) / speed));
+        }
         rouletteTarget = number;
+        rouletteMotionStart = now;
+        rouletteStartPosition = current;
+        rouletteEndPosition = landing;
+        rouletteDecelMs = decel;
+        rouletteStopAt = now + RouletteMotion.duration(landing - current, speed, decel);
         roulettePayout = payout;
         rouletteStake = stake;
         rouletteBalance = newBalance;
