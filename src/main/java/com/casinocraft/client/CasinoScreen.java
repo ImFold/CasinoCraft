@@ -20,6 +20,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registries;
 import net.minecraft.screen.slot.Slot;
@@ -320,15 +321,15 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         boolean overlay = bigWin.active(now) && tab == bigWinTab;
         if (showPaytable) {
             drawPaytable(context, bet);
-        } else {
-            drawSlotCabinet(context);
-            drawBetPanel(context, bet);
-            if (!overlay) {
-                drawReels(context, now);
-                drawWinPanel(context, now);
-            }
-            drawCabinetLights(context, now);
+            return;
         }
+        drawSlotCabinet(context);
+        drawBetPanel(context, bet);
+        if (!overlay) {
+            drawReels(context, now);
+            drawWinPanel(context, now);
+        }
+        drawCabinetLights(context, now);
         drawSpinButton(context, now, bet);
     }
 
@@ -430,7 +431,30 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
         box(context, x + 1, y + 1, CELL_W - 2, CELL_H - 2, 0xFF101018, border);
         context.fill(x + 2, y + 2, x + CELL_W - 2, y + 3,
                 (symbol.color & 0xFFFFFF) | 0x22000000);
-        drawSlotSymbol(context, symbol, x + CELL_W / 2.0, y + 3.0, 1.3f);
+        ItemStack item = slotSymbolItem(symbol);
+        if (item.isEmpty()) {
+            drawSlotSymbol(context, symbol, x + CELL_W / 2.0, y + 3.0, 1.3f);
+        } else {
+            drawItemIcon(context, item, x + CELL_W / 2.0, y + CELL_H / 2.0, 0.75f);
+        }
+    }
+
+    /** Fruit symbols use real in-game items; the rest stay as glyphs. */
+    private static ItemStack slotSymbolItem(SlotSymbol symbol) {
+        return switch (symbol) {
+            case CHERRY -> new ItemStack(Items.SWEET_BERRIES);
+            case LEMON -> new ItemStack(Items.GOLDEN_APPLE);
+            default -> ItemStack.EMPTY;
+        };
+    }
+
+    private void drawItemIcon(DrawContext context, ItemStack stack, double centerX, double centerY, float scale) {
+        MatrixStack matrices = context.getMatrices();
+        matrices.push();
+        matrices.translate(centerX - 8.0 * scale, centerY - 8.0 * scale, 0.0);
+        matrices.scale(scale, scale, 1.0f);
+        context.drawItem(stack, 0, 0);
+        matrices.pop();
     }
 
     private void drawWinPanel(DrawContext context, long now) {
@@ -540,23 +564,28 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
     }
 
     private void drawPaytable(DrawContext context, long bet) {
-        box(context, 153, 48, 178, 82, 0xFF151520, C_GOLD);
+        box(context, 153, 48, 178, 98, 0xFF151520, C_GOLD);
         drawFittedText(context, Text.translatable("gui.casinocraft.paytable_title"), 242, 52, 150, C_GOLD);
         drawButton(context, 316, 50, 12, 12, Text.literal("X"), false, true, C_BTN);
-        context.drawTextWithShadow(textRenderer, Text.literal("3"), 216, 62, C_DIM);
-        context.drawTextWithShadow(textRenderer, Text.literal("4"), 256, 62, C_DIM);
-        context.drawTextWithShadow(textRenderer, Text.literal("5"), 296, 62, C_DIM);
+        context.drawTextWithShadow(textRenderer, Text.literal("3"), 216, 61, C_DIM);
+        context.drawTextWithShadow(textRenderer, Text.literal("4"), 256, 61, C_DIM);
+        context.drawTextWithShadow(textRenderer, Text.literal("5"), 296, 61, C_DIM);
         for (int i = 0; i < 6; i++) {
             SlotSymbol symbol = SlotSymbol.values()[i];
-            int y = 70 + i * 7;
-            drawSlotSymbol(context, symbol, 170, y, 0.65f);
+            int y = 70 + i * 11;
+            ItemStack item = slotSymbolItem(symbol);
+            if (item.isEmpty()) {
+                drawSlotSymbol(context, symbol, 174, y + 1, 0.65f);
+            } else {
+                drawItemIcon(context, item, 174, y + 5, 0.625f);
+            }
             for (int matches = 3; matches <= 5; matches++) {
                 drawFittedText(context, Text.literal("x" + symbol.multiplier(matches)),
-                        216 + (matches - 3) * 40, y, 36, symbol.color, 0.65f);
+                        216 + (matches - 3) * 40, y + 1, 36, symbol.color, 0.65f);
             }
         }
         drawFittedText(context, Text.translatable("gui.casinocraft.line_stake", Money.format(bet / SlotMachine.LINE_COUNT)),
-                242, 114, 168, C_DIM, 0.55f);
+                242, 137, 168, C_DIM, 0.55f);
     }
 
     private void drawRoulette(DrawContext context, long now, long bet) {
@@ -911,7 +940,7 @@ public class CasinoScreen extends HandledScreen<CasinoScreenHandler> {
                     bigWin.clear();
                     return true;
                 }
-                if (showPaytable && inside(px, py, 153, 48, 178, 82)) {
+                if (showPaytable && inside(px, py, 153, 48, 178, 98)) {
                     return true;
                 }
             }

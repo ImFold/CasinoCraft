@@ -13,6 +13,7 @@ All notable changes to CasinoCraft.
 * The paytable is a proper modal and no longer overlaps reels, bet or hint text; big-win overlays no longer leak the underlying game text. Reels were enlarged to fill the cabinet.
 * The window title is localized now: English clients show "Casino" instead of the hard-coded Russian label.
 * The roulette strip scrolls continuously and brakes smoothly into the winning number instead of jumping one cell at a time; a short tick marks the stop.
+* Cherry and lemon are real in-game items now (sweet berries and golden apple) instead of text glyphs, and the paytable shows item icons in a taller layout that no longer covers the spin button.
 * Slot results carry all 15 cells and the originating screen ID. Requires updating both server and clients.
 * Added regression tests for Wild rules, diagonal lines, total-stake accounting, maximum payouts, result packets and reel easing.
 
